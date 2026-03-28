@@ -127,8 +127,8 @@ def get_course_file_names(course_name:str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     config_file_creator(
-        "12734~V2EAyC8nP82RLnPWNaaBfMfuMUKhVJ4GxDVvT9GTXJLG93rJ4YrhMKJMnTaXaTtG",
-        "https://canvas.iteso.mx",
+        "",
+        "",
     )
     r = binary_caller()
     print(r.returncode)
