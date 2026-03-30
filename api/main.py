@@ -6,8 +6,8 @@ from . import models
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Canvas RAG API",
-    description="REST API for Canvas RAG project - ITESO",
+    title="CapiAPI",
+    description="REST API for CapiAPI",
     version="1.0.0"
 )
 
