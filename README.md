@@ -5,6 +5,7 @@ A data engineering project that integrates Canvas LMS with a RAG pipeline to hel
 ---
 
 ## Architecture
+Canvas API → PostgreSQL (Neon) → Debezium CDC → Kafka → ELT Pipeline → Vector DB → LLM
 
 ---
 
@@ -51,6 +52,20 @@ python init_db.py
 ---
 
 ## Project Structure
+DATA_ENGINEERING_PROJECT/
+├── database/
+│   └── schema.sql
+├── neon_auth/
+│   ├── __init__.py
+│   ├── auth.py       ← sign-up, sign-in, get_jwt_token
+│   ├── client.py     ← NeonClient with auto re-auth
+│   └── config.py     ← environment variables
+├── .env.example
+├── .gitignore
+├── init_db.py
+├── README.md
+├── requirements.txt
+└── test_neon.py
 
 ---
 
@@ -74,6 +89,10 @@ See [database/schema.sql](database/schema.sql) for full schema.
 Neon Data API (PostgREST) with JWT authentication via Neon Auth.
 
 **Authentication flow:**
+1. Backend uses `NEON_API_KEY` to call Neon Auth (server-side only, never exposed to users)
+2. Neon Auth returns a short-lived JWT
+3. JWT is used to query the Data API with RLS applied per user
+4. On token expiry (401), `NeonClient` re-authenticates automatically
 
 **Decision log:** Initially implemented FastAPI + SQLAlchemy REST API.
 Migrated to Neon Data API as it is the canonical approach for Neon databases,
