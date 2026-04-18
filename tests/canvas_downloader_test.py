@@ -34,3 +34,8 @@ canvas_manager = CanvasDownloader(canvas_api_token, canvas_url)
 
 # Test clean temp_stage 
 r = canvas_manager.clean_temp_stage()
+
+
+# Test download files without the destination folder
+#course_codes = ["P2026_MAF3071J", "P2026_MAF3653P"]
+#r = canvas_manager.download_course(course_codes)

@@ -1,54 +1,74 @@
-"""
-This python file is ment to provide a python wrapper on the `canvas-downloader` binary and parse its results
-in a pythonic and convenient way
-
-"""
-
 import pandas as pd  # ty: ignore
 import subprocess
 from pathlib import Path
+import os
+import shutil
 
 
 class CanvasDownloader:
-
     def __init__(self, canvas_api_token: str, canvas_url: str) -> None:
-        self.canvas_api_token = canvas_api_token
-        self.canvas_url = canvas_url
+        self.__canvas_api_token = canvas_api_token
+        self.__canvas_url = canvas_url
 
-    def config_file_creator(self) -> None:
+    def _config_file_creator(self) -> None:
         """The binary requires a `canvas-downloader.toml` to load
         user's secrets, this function is responsable for creating that file
         in the directory /ETL/EXTRACT/extract-tools/"""
 
-        # TODO: error handling
+        # Directions
+        base_path = Path(__file__).parent / "extract-tools"
+        file_directory = base_path / "canvas-downloader.toml"
+        binary_path = base_path / "canvas-downloader"
 
-        file_directory = (
-            Path(__file__).parent / "extract-tools" / "canvas-downloader.toml"
+        # .toml file content
+        file_content = (
+            f'canvas_url = "{self.__canvas_url}"\n'
+            f'canvas_token = "{self.__canvas_api_token}"'
         )
 
-        file_content = f"""
-        canvas_url= "{self.canvas_url}"
-        canvas_token= "{self.canvas_api_token}"
-        """
+        # validate that the binary is where is suposed to and is executable
+        if not binary_path.exists():
+            raise RuntimeError(
+                f"FATAL: El binario no existe en {binary_path}. Revisa tu Dockerfile."
+            )
 
-        # create the file
-        with open(file_directory, "w") as f:
-            f.write(file_content)
+        if not os.access(binary_path, os.X_OK):
+            raise PermissionError(
+                f"FATAL: El binario en {binary_path} no tiene permisos de ejecución."
+            )
 
-    def binary_caller(
-        self,
-        subcommand: str = None,
-        flags: list[str] = [],
+        try:
+            # create the file
+            with open(file_directory, "w", encoding="utf-8") as f:
+                f.write(file_content)
+
+        except PermissionError as e:
+            raise e
+        except OSError as e:
+            raise e
+        except Exception as e:
+            raise e
+
+    def _binary_caller(
+        self, flags: list[str] | None = [], input=None
     ) -> subprocess.CompletedProcess:
         """This function is responsable for making use of the canvas-downloader binary
         it calls config_file_creator and handles error code, THIS FUNCTION MIGHT FAIL"""
 
-        config_file_creator(self.canvas_api_token, self.canvas_url)
+        if flags is None:
+            flags = []
+
+        try:
+            self._config_file_creator()
+        except Exception as e:
+            raise RuntimeError(
+                f"There was a problem while creating config.toml file \n {e}"
+            )
 
         binary_directory = Path(__file__).parent / "extract-tools"
 
         # call without subcommand argument
-        if subcommand is None:
+        if input is None:
             result = subprocess.run(
                 [binary_directory / "canvas-downloader", *flags],
                 capture_output=True,
@@ -56,9 +76,15 @@ class CanvasDownloader:
             )
         else:
             result = subprocess.run(
-                [binary_directory / "canvas-downloader", subcommand, *flags],
+                [binary_directory / "canvas-downloader", *flags],
                 capture_output=True,
+                input=input,
                 cwd=binary_directory,
+            )
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Canvas downloader ended with {result.returncode}\n log: {result.stderr}"
             )
 
         return result
@@ -67,13 +93,13 @@ class CanvasDownloader:
         """This function calls the binary without arguments, which should
         return the courses in which the user is enrolled in in a pd.DataFrame"""
 
-        result = self.binary_caller()
+        result = self._binary_caller()
 
         # parse the result
         # TODO: error handling
 
-        output = str(result.stdout).lower()
-        output = output.split(r"\n")
+        output = str(result.stdout).upper()
+        output = output.split(r"\N")
 
         rows_slice = slice(3, -1)
         class_code_idx = 1
@@ -106,11 +132,19 @@ class CanvasDownloader:
 
         for course_code in course_codes:
             flags = ["-c", course_code, "--dry-run", "--no-raw"]
-            result = self.binary_caller(flags=flags)
+            result = self._binary_caller(flags=flags)
 
             # parse the result
 
             output = str(result.stdout).lower()
+
+            # validate that the course code was valid
+            error_pattern = "could not find any course matching course name(s)"
+            if error_pattern in output:
+                raise RuntimeError(
+                    f"el codigo {course_code} no es un codigo de clase valido"
+                )
+
             output = output.split(r"\n")
 
             begining_content_index = None
@@ -134,6 +168,8 @@ class CanvasDownloader:
             for line in output[content_slice]:
                 row = line.split("->")
                 download_url_column.append(row[0])
+
+                # want to cut the name of the file at <filename.pdf>
                 file_name_column.append(row[1][:-9])
 
             df = pd.DataFrame(
@@ -149,84 +185,48 @@ class CanvasDownloader:
         file_name_df = pd.concat(file_name_df_list)
         return file_name_df
 
-
-# === === === === === === === === === === === === === === === === ===
+    # === === === === === === === === === === === === === === === === ===
     # download flow
-# === === === === === === === === === === === === === === === === ===
+    # === === === === === === === === === === === === === === === === ===
 
-    def download_course(self,course_codes:list[str]):
-        pass
-        temp_stage_direction = 
+    def download_course(self, course_codes: list[str]) -> None:
+        # ==
+        # Se debe de garantizar que todos los elementos de course_codes sean codigos validos
 
+        if not all(isinstance(c, str) for c in course_codes) or len(course_codes) == 0:
+            raise Exception("course_codes debe de ser una lista no vacia de strings")
 
-# === === === === === === === === === === === === === === === === ===
-# === === === === === === === === === === === === === === === === ===
-# === === === === === === === === === === === === === === === === ===
-# === === === === === === === === === === === === === === === === ===
-# binary wrappers
-# === === === === === === === === === === === === === === === === ===
+        temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
+        for course_code in course_codes:
+            # create course_exclusive_directory
 
-def config_file_creator(canvas_token_api: str, canvas_url: str) -> None:
-    """The binary requires a `canvas-downloader.toml` to load
-    user's secrets, this function is responsable for creating that file
-    in the directory /ETL/EXTRACT/extract-tools/"""
+            course_folder_direction = temp_stage_direction / course_code
+            course_folder_direction.mkdir(parents=True, exist_ok=True)
 
-    # TODO: error handling
+            flags = ["-c", course_code, "--no-raw", "-d", temp_stage_direction]
+            self._binary_caller(flags=flags, input=b"y/n")
 
-    file_directory = Path(__file__).parent / "extract-tools" / "canvas-downloader.toml"
+    def clean_temp_stage(self) -> None:
+        temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
-    file_content = f"""
-    canvas_url= "{canvas_url}"
-    canvas_token= "{canvas_token_api}"
-    """
+        if not temp_stage_direction.exists():
 
-    # create the file
-    with open(file_directory, "w") as f:
-        f.write(file_content)
+            print("the temporary stage direction does not exists")
+            temp_stage_direction.mkdir(parents=True)
+            print(f"temp stage directory was created at {temp_stage_direction}")
 
-    # # delete the file
-    # file_directory.unlink()
+            return
 
+        for x in temp_stage_direction.iterdir():
 
-def binary_caller(
-    canvas_token_api: str,
-    canvas_url: str,
-    subcommand: str = None,
-    flags: list[str] = [],
-) -> subprocess.CompletedProcess:
-    """This function is responsable for making use of the canvas-downloader binary
-    it calls config_file_creator and handles error code, THIS FUNCTION MIGHT FAIL"""
-
-    config_file_creator(canvas_token_api, canvas_url)
-
-    binary_directory = Path(__file__).parent / "extract-tools"
-
-    # call without subcommand argument
-    if subcommand is None:
-        result = subprocess.run(
-            [binary_directory / "canvas-downloader", *flags],
-            capture_output=True,
-            cwd=binary_directory,
-        )
-    else:
-        result = subprocess.run(
-            [binary_directory / "canvas-downloader", subcommand, *flags],
-            capture_output=True,
-            cwd=binary_directory,
-        )
-
-    return result
+            if x.is_dir():
+                shutil.rmtree(x)
+            else:
+                x.unlink()
 
 
 # === === === === === === === === === === === === === === === === ===
-# parsers
 # === === === === === === === === === === === === === === === === ===
-
-
 # === === === === === === === === === === === === === === === === ===
-# db uploaders
 # === === === === === === === === === === === === === === === === ===
-
-
-
