@@ -229,17 +229,4 @@ def binary_caller(
 # === === === === === === === === === === === === === === === === ===
 
 
-if __name__ == "__main__":
-    # config_file_creator(
-    # )
-
-    can_dow = CanvasDownloader(
-        canvas_api_token="12734~V2EAyC8nP82RLnPWNaaBfMfuMUKhVJ4GxDVvT9GTXJLG93rJ4YrhMKJMnTaXaTtG",
-        canvas_url="https://canvas.iteso.mx/",
-    )
-
-    df = can_dow.get_user_courses()
-    class_codes = ["P2026_MAF3071J", "P2026_MAF3661Q"]
-    r = can_dow.get_course_file_name(class_codes)
-    print(r)
 
