@@ -39,7 +39,7 @@ const CapiLogoWrapper = ({ size = 48, dark = false, style = {} }) => (
 
 // ─── API CONFIG ────────────────────────────────────────────────────────────────
 const API_BASE_URL = "http://localhost:8000";
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const MOCK_COURSES = [
   { id: "1", name: "Cálculo Diferencial", code: "MATH101" },
