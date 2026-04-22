@@ -12,4 +12,4 @@ client = BlobServiceClient(
 containers = [c["name"] for c in client.list_containers()]
 print(containers)
 
-# Observamos los containers que tenemos en nuestro datalake
+# Take a look at the containers we have in our data lake
