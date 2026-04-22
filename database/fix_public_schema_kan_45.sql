@@ -7,8 +7,6 @@ ALTER TABLE users
 ALTER TABLE courses
     DROP COLUMN canvas_id;
 
-
-
 ALTER TABLE users
     ADD COLUMN password VARCHAR(64) NOT NULL;
 

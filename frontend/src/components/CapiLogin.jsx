@@ -6,7 +6,7 @@ const CAPI_IMG = "data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BS
 // Body enviado al backend: { email, password, canvas_token }
 // Respuesta esperada:      { token, user: { name, email }, courses: [] }
 const API_BASE_URL = "http://localhost:8000";
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const authService = {
   login: async ({ email, password, canvasToken }) => {
