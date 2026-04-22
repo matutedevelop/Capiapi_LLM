@@ -1,6 +1,3 @@
-Readme · MD
-Copiar
-
 # CapiAPI
  
 A data engineering project that integrates Canvas LMS with a RAG pipeline to help ITESO students study smarter.
@@ -17,8 +14,10 @@ Canvas API → PostgreSQL (Neon) → Debezium CDC → Kafka → ELT Pipeline →
 - **Auth**: Neon Auth (Better Auth) + JWT
 - **Data API**: Neon Data API (PostgREST)
 - **Data Lake**: Azure Blob Storage
+- **Vector DB**: Qdrant
 - **Language**: Python
 - **Admin tool**: DBeaver
+
 ---
  
 ## Setup
@@ -63,6 +62,10 @@ DATA_ENGINEERING_PROJECT/
 │   ├── auth.py       ← sign-up, sign-in, get_jwt_token
 │   ├── client.py     ← NeonClient with auto re-auth
 │   └── config.py     ← environment variables
+├── qdrant/
+│   ├── config.py            ← Qdrant client & constants
+│   └── create_collection.py ← collection initialization script
+├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
 ├── init_db.py
@@ -83,6 +86,7 @@ Relational database built on Neon (PostgreSQL 17).
 - `user_courses` — Many-to-many between users and courses
 - `documents` — Course files (PDF, PPTX, DOCX, Excel, CSV)
 - `sync_logs` — CDC tracking for the RAG pipeline
+
 See [database/schema.sql](database/schema.sql) for full schema.
  
 ---
@@ -95,6 +99,7 @@ Neon Data API (PostgREST) with JWT authentication via Neon Auth.
 2. Neon Auth returns a short-lived JWT
 3. JWT is used to query the Data API with RLS applied per user
 4. On token expiry (401), `NeonClient` re-authenticates automatically
+
 **Decision log:** Initially implemented FastAPI + SQLAlchemy REST API.
 Migrated to Neon Data API as it is the canonical approach for Neon databases,
 with built-in JWT auth and no additional server required.
@@ -108,7 +113,6 @@ Azure Blob Storage configured as the central data lake for the RAG pipeline.
 - `canvas-bruto` — raw files downloaded from Canvas, organized by subject code and file type
 - `canvas-procesado` — all files converted to Markdown, same folder structure as raw
 
- 
 **Key decisions:**
 - Files grouped by subject code extracted from the Canvas course name. Multiple groups of the same subject share one folder.
 
@@ -118,4 +122,31 @@ AZURE_STORAGE_ACCOUNT_NAME=
 AZURE_STORAGE_ACCOUNT_KEY=
 AZURE_CONTAINER_RAW=canvas-bruto
 AZURE_CONTAINER_PROCESSED=canvas-procesado
+```
+
+---
+
+### KAN-11 — Vector Database Initialization (Owen Loza)
+Qdrant set up as the vector database for the RAG pipeline.
+
+**Files:**
+- `docker-compose.yml` — runs Qdrant locally with persistent storage
+- `qdrant/config.py` — client connection and constants
+- `qdrant/create_collection.py` — idempotent collection initialization script
+
+**Collection design:**
+- Vector size: `768` — matches Gemini `text-embedding-004` output dimensions
+- Distance metric: `COSINE` — standard for text embeddings
+- Collections are created dynamically per subject code during ingestion (`MAT101`, `ING202`, etc.)
+
+**How to run:**
+```bash
+# Start Qdrant
+docker compose up -d
+
+# Create collection
+python qdrant/create_collection.py
+
+# Verify at
+http://localhost:6333/dashboard
 ```
