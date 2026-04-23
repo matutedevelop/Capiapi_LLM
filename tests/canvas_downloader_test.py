@@ -1,6 +1,6 @@
 import os
 import dotenv
-from ETL.EXTRACT.canvas_downloader import CanvasDownloader
+from ETL.EXTRACT.canvas_downloader import CanvasClient
 
 dotenv.load_dotenv()
 
@@ -9,7 +9,7 @@ canvas_url = os.getenv("CANVAS_URL")
 
 
 # Initialize manager
-canvas_manager = CanvasDownloader(canvas_api_token, canvas_url)
+canvas_manager = CanvasClient(canvas_api_token, canvas_url)
 
 
 # Test get user courses

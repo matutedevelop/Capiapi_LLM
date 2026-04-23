@@ -15,15 +15,20 @@ def sync_courses(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
 
     data = nc.select(user_courses_table_name + f"?user_id=eq.{user_id}")
 
-    if isinstance(data, dict):
-        data = [data]
+    user_courses_db = pd.DataFrame(data) if len(data) > 0 else pd.DataFrame({"user_id":[]})
 
-    user_courses_db = pd.DataFrame(data)
+    courses_db = {}
+    for course_id in user_courses_db["course_id"]:
+        course = nc.select(course_table_name + f"?id=eq.{course_id}")
+        if course:
+            
 
-    user_courses_canvas = cc.get_user_courses()
+    courses_enrolled_in = nc.select(course_table_name + f"?user_")
+ user_courses_canvas = cc.get_user_courses()
+    
 
-    print(user_courses_db.columns)
 
+    
 
 
 def main():

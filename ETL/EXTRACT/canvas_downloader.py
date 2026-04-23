@@ -5,7 +5,7 @@ import os
 import shutil
 
 
-class CanvasDownloader:
+class CanvasClient:
     def __init__(self, canvas_api_token: str, canvas_url: str) -> None:
         self.__canvas_api_token = canvas_api_token
         self.__canvas_url = canvas_url
