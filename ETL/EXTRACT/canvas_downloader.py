@@ -164,18 +164,28 @@ class CanvasDownloader:
 
             download_url_column = []
             file_name_column = []
+            file_type_column = []
 
             for line in output[content_slice]:
                 row = line.split("->")
-                download_url_column.append(row[0])
 
                 # want to cut the name of the file at <filename.pdf>
-                file_name_column.append(row[1][:-9])
+
+                end_file_name_idx = row[1].rfind("(")
+                begining_file_ext_idx = row[1].rfind(".")
+
+                file_name_slice = slice(0,end_file_name_idx)
+                file_ext_slice = slice(begining_file_ext_idx,end_file_name_idx)
+
+                file_name_column.append(row[1][file_name_slice])
+                file_type_column.append(row[1][file_ext_slice])
+                download_url_column.append(row[0])
 
             df = pd.DataFrame(
                 {
                     "download_url": download_url_column,
                     "file_name": file_name_column,
+                    "file_extention": file_type_column,
                     "course": [course_code] * len(output[content_slice]),
                 }
             )
