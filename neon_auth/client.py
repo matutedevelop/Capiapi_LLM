@@ -12,17 +12,20 @@ class NeonClient:
     def _authenticate(self):
         self.token = get_jwt_token(self.email, self.password)
 
-    def _get_headers(self):
-        return {
+    def _get_headers(self, extra: dict = None):
+        headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
+        if extra:
+            headers.update(extra)
+        return headers
 
-    def _request(self, method: str, table: str, **kwargs):
+    def _request(self, method: str, table: str, extra_headers: dict = None, **kwargs):
         r = httpx.request(
             method,
             f"{NEON_DATA_API_URL}/{table}",
-            headers=self._get_headers(),
+            headers=self._get_headers(extra_headers),
             **kwargs
         )
         if r.status_code == 401:
@@ -31,7 +34,7 @@ class NeonClient:
             r = httpx.request(
                 method,
                 f"{NEON_DATA_API_URL}/{table}",
-                headers=self._get_headers(),
+                headers=self._get_headers(extra_headers),
                 **kwargs
             )
         return r
@@ -42,9 +45,18 @@ class NeonClient:
         return r.json()
 
     def insert(self, table: str, data: dict):
-        r = self._request("POST", table, json=data)
+        r = self._request(
+            "POST", table,
+            extra_headers={"Prefer": "return=representation"},
+            json=data
+        )
         print(f"INSERT {table} - status: {r.status_code}")
-        return r.json()
+        if r.status_code in (200, 201) and r.content:
+            result = r.json()
+            if isinstance(result, list):
+                return result[0] if result else {}
+            return result
+        return {}
 
     def update(self, table: str, params: dict, data: dict):
         r = self._request("PATCH", table, params=params, json=data)

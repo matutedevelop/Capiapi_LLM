@@ -24,8 +24,8 @@ Canvas API → PostgreSQL (Neon) → Debezium CDC → Kafka → ELT Pipeline →
  
 ### 1. Clone the repo
 ```bash
-git clone https://github.com/matutedevelop/DATA_ENGINEERING_PROJECT.git
-cd DATA_ENGINEERING_PROJECT
+git clone https://github.com/matutedevelop/Capiapi_LLM.git
+cd Capiapi_LLM
 ```
  
 ### 2. Create virtual environment
@@ -50,24 +50,65 @@ cp .env.example .env
 ```bash
 python init_db.py
 ```
+
+### 6. Start the backend API
+```bash
+uvicorn api.main:app --reload
+```
+
+### 7. Start the frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
  
 ---
  
 ## Project Structure
-DATA_ENGINEERING_PROJECT/
+Capiapi_LLM/
+├── api/
+│   ├── __init__.py
+│   └── main.py                    ← FastAPI backend (auth endpoint)
 ├── database/
-│   └── schema.sql
+│   ├── schema.sql
+│   └── fix_public_schema_kan_45.sql
+├── datalake_example/
+│   ├── prueba_collection.py
+│   └── prueba_loadfile.py
+├── ETL/
+│   └── EXTRACT/
+│       └── extract-tools/
+│           ├── canvas-downloader/
+│           ├── __init__.py
+│           └── canvas_downloader.py
+├── frontend/
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── icons.svg
+│   └── src/
+│       ├── components/
+│       │   ├── CapiLogin.jsx      ← Login page
+│       │   └── CapiAPI_chat.jsx   ← Chat interface
+│       ├── App.jsx
+│       ├── App.css
+│       ├── main.jsx
+│       └── index.css
 ├── neon_auth/
 │   ├── __init__.py
-│   ├── auth.py       ← sign-up, sign-in, get_jwt_token
-│   ├── client.py     ← NeonClient with auto re-auth
-│   └── config.py     ← environment variables
+│   ├── auth.py                    ← sign-up, sign-in, get_jwt_token
+│   ├── client.py                  ← NeonClient with auto re-auth
+│   └── config.py                  ← environment variables
 ├── qdrant/
-│   ├── config.py            ← Qdrant client & constants
-│   └── create_collection.py ← collection initialization script
+│   ├── config.py                  ← Qdrant client & constants
+│   └── create_collection.py       ← collection initialization script
+├── tests/
+│   ├── __init__.py
+│   └── canvas_downloader_test.py
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
+├── flake.nix
 ├── init_db.py
 ├── README.md
 ├── requirements.txt
@@ -105,8 +146,34 @@ Migrated to Neon Data API as it is the canonical approach for Neon databases,
 with built-in JWT auth and no additional server required.
  
 ---
+
+### KAN-10 — Frontend Demo + Backend Connection (Demien Becerra / Owen Loza)
+React + Vite frontend with login page connected to the Python backend.
+
+**Demien Becerra:**
+- Built the full React frontend (CapiLogin.jsx, CapiAPI_chat.jsx)
+- Implemented Canvas credential form, token persistence to localStorage
+- Connected login redirect to chat interface
+- Displayed enrolled courses from Canvas (mock data)
+
+**Owen Loza:**
+- Created FastAPI backend with `POST /auth/login` endpoint
+- Implemented user exists/create logic:
+  - If user exists → verifies bcrypt password
+  - If user does not exist → creates user with hashed password in DB
+- Connected frontend to real backend (`USE_MOCK = false`)
+
+**Login flow:**
+1. User submits `{ email, password, canvas_token }` from the frontend
+2. Backend checks if user exists in `users` table via Neon Data API
+3. If exists → verifies password with bcrypt
+4. If not → creates new user with hashed password
+5. Returns `{ user, courses }` to frontend
+6. Frontend redirects to chat interface
+
+---
  
-### KAN-8 — Data Lake Initialization & Setup (Owen Loza)
+### KAN-8 — Data Lake Initialization & Setup (Santiago Ayón)
 Azure Blob Storage configured as the central data lake for the RAG pipeline.
  
 **Two-container architecture:**
@@ -126,7 +193,7 @@ AZURE_CONTAINER_PROCESSED=canvas-procesado
 
 ---
 
-### KAN-11 — Vector Database Initialization (Owen Loza)
+### KAN-11 — Vector Database Initialization (Santiago Ayón)
 Qdrant set up as the vector database for the RAG pipeline.
 
 **Files:**
