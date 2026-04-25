@@ -49,7 +49,6 @@ def sync_courses(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
         data_to_insert_user_courses = {"course_id": course_id, "user_id": user_id}
         nc.insert(user_courses_table_name, data=data_to_insert_user_courses)
 
-    # TODO test this workflow
 
     for delete_code in to_delete:
         course_id = map_code_id_db[delete_code]
@@ -64,7 +63,7 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
     courses_table_name = "courses"
     documents_table_name = "documents"
 
-    # Construir map code -> course_id (igual que sync_courses)
+    # build maping class_code -> course_id
     user_courses_data_db = nc.select(
         user_courses_table_name, params={"user_id": f"eq.{user_id}"}
     )
@@ -79,7 +78,7 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
         if course:
             map_code_id_db[course[0]["code"]] = course[0]["id"]
 
-    # Obtener documentos de Canvas (saltando cursos problemáticos)
+
     canvas_df, problematic_courses = cc.get_course_file_name(map_code_id_db.keys())
 
     # Some courses cant be scraped with canvas-downloader binary, so we take them apart
@@ -121,15 +120,6 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
         }
         to_insert_data.append(data)
 
-        # nc.insert(
-        #     documents_table_name,
-        #     data={
-        #         "course_id": course_id,
-        #         "filename": row["file_name"],
-        #         "file_type": row["file_extention"],
-        #         "file_url": row["download_url"],
-        #     },
-        # )
     nc.insert(documents_table_name, data=to_insert_data)
 
     # Delete
@@ -137,51 +127,6 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
         doc_id = map_url_id_db[url]
         nc.delete(documents_table_name, params={"id": f"eq.{doc_id}"})
 
-    # user_courses_table_name = "user_courses"
-    # courses_table_name = "courses"
-    # documents_table_name = "documents"
-    #
-    # user_courses_data_db = nc.select(
-    #     user_courses_table_name, params={"user_id": f"eq.{user_id}"}
-    # )
-    # user_courses_df = (
-    #     pd.DataFrame(user_courses_data_db)
-    #     if len(user_courses_data_db) > 0
-    #     else pd.DataFrame({"user_id": [], "course_id": [], "id": []})
-    # )
-    #
-    # course_codes_id = {}
-    # for course_id in user_courses_df["course_id"]:
-    #     course = nc.select(courses_table_name, params={"id": f"eq.{course_id}"})
-    #     if course:
-    #         course_code = course[0]["code"]
-    #         course_codes_id[course_code] = course_id
-    #
-    # course_file_names_df, problematic_courses = cc.get_course_file_name(
-    #     course_codes_id.keys()
-    # )
-    #
-    # data_to_insert = []
-    #
-    # # for i, _, row in enumerate(course_file_names_df.iterrows()):
-    # #     data = {
-    # #         "course_id": course_codes_id[f"{row['course']}"],
-    # #         "filename": row["file_name"],
-    # #         "file_type": row["file_extention"],
-    # #         "file_url": row["download_url"],
-    # #     }
-    # #
-    # #     data_to_insert.append(data)
-    # #
-    # #     if i + 1 % 100 == 0:
-    # #         print("sleeping 20 seconds")
-    # #         time.sleep(20)
-    # #
-    # #     nc.insert(documents_table_name, data=data)
-    #
-    # for c in problematic_courses:
-    #     cours_id = map_code_id_db[c]
-    #
 
 
 def main():
