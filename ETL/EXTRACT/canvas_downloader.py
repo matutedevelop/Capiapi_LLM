@@ -5,7 +5,7 @@ import os
 import shutil
 
 
-class CanvasDownloader:
+class CanvasClient:
     def __init__(self, canvas_api_token: str, canvas_url: str) -> None:
         self.__canvas_api_token = canvas_api_token
         self.__canvas_url = canvas_url
@@ -55,8 +55,12 @@ class CanvasDownloader:
         """This function is responsable for making use of the canvas-downloader binary
         it calls config_file_creator and handles error code, THIS FUNCTION MIGHT FAIL"""
 
+
+
+        temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
+
         if flags is None:
-            flags = []
+            flags = ["--no-raw","--dry-run","-d", temp_stage_direction ]
 
         try:
             self._config_file_creator()
@@ -81,11 +85,17 @@ class CanvasDownloader:
                 input=input,
                 cwd=binary_directory,
             )
+        if result.returncode == -6:
+            self._clean_binary_directory()
+            raise ProblematicCourseException
 
-        if result.returncode != 0:
+
+        elif result.returncode != 0:
             raise RuntimeError(
                 f"Canvas downloader ended with {result.returncode}\n log: {result.stderr}"
             )
+
+        self._clean_binary_directory()
 
         return result
 
@@ -113,8 +123,8 @@ class CanvasDownloader:
                 continue
 
             row_values = row.split("|")
-            class_code_column.append(row_values[class_code_idx])
-            class_name_column.append(row_values[class_name_idx])
+            class_code_column.append(row_values[class_code_idx].strip())
+            class_name_column.append(row_values[class_name_idx].strip())
 
         df = pd.DataFrame(
             {"class_code": class_code_column, "class_name": class_name_column}
@@ -122,7 +132,7 @@ class CanvasDownloader:
 
         return df
 
-    def get_course_file_name(self, course_codes: list[str]):
+    def get_course_file_name(self, course_codes: list[str]) -> (pd.DataFrame,list[str]):
         """This function takes a list of valid course_codes runs the binary over this courses to get
         the file names, is important to assure that in all courses passed as argument, the student whose
         is the owner of the api token of this instance, is enrolled in this courses, otherwise the binary
@@ -130,9 +140,16 @@ class CanvasDownloader:
         """
         file_name_df_list = []
 
+        problematic_course_codes = []
+
         for course_code in course_codes:
             flags = ["-c", course_code, "--dry-run", "--no-raw"]
-            result = self._binary_caller(flags=flags)
+
+
+            try:
+                result = self._binary_caller(flags=flags)
+            except ProblematicCourseException:
+                problematic_course_codes.append(course_code)
 
             # parse the result
 
@@ -164,18 +181,29 @@ class CanvasDownloader:
 
             download_url_column = []
             file_name_column = []
+            file_type_column = []
 
             for line in output[content_slice]:
                 row = line.split("->")
-                download_url_column.append(row[0])
 
                 # want to cut the name of the file at <filename.pdf>
-                file_name_column.append(row[1][:-9])
+
+                begining_file_name_idx = row[1].rfind("/") 
+                end_file_name_idx = row[1].rfind("(")
+                begining_file_ext_idx = row[1].rfind(".")
+
+                file_name_slice = slice(begining_file_name_idx,end_file_name_idx)
+                file_ext_slice = slice(begining_file_ext_idx,end_file_name_idx)
+
+                file_name_column.append(row[1][file_name_slice])
+                file_type_column.append(row[1][file_ext_slice])
+                download_url_column.append(row[0])
 
             df = pd.DataFrame(
                 {
                     "download_url": download_url_column,
                     "file_name": file_name_column,
+                    "file_extention": file_type_column,
                     "course": [course_code] * len(output[content_slice]),
                 }
             )
@@ -183,7 +211,7 @@ class CanvasDownloader:
             file_name_df_list.append(df)
 
         file_name_df = pd.concat(file_name_df_list)
-        return file_name_df
+        return (file_name_df,problematic_course_codes)
 
     # === === === === === === === === === === === === === === === === ===
     # download flow
@@ -225,6 +253,21 @@ class CanvasDownloader:
             else:
                 x.unlink()
 
+    def _clean_binary_directory(self) -> None:
+        binary_directory = Path(__file__).parent / "extract-tools"
+        if not binary_directory.exists():
+            print("the binary directory does not exist")
+            return
+        for x in binary_directory.iterdir():
+            if x.is_dir():
+                shutil.rmtree(x)
+                print(f"Removed directory: {x.name}")
+
+
+
+class ProblematicCourseException(Exception):
+    """This exception is Raised when the course is problematic to query e.g. has not enought content to query, this a thing of the canvas binary and is not completlly desired"""
+    pass
 
 # === === === === === === === === === === === === === === === === ===
 # === === === === === === === === === === === === === === === === ===
