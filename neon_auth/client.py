@@ -56,7 +56,9 @@ class NeonClient:
             if isinstance(result, list):
                 return result[0] if result else {}
             return result
-        return {}
+        else:
+            print(f"INSERT {table} ended with code {r.status_code} log:\n  {r.text}")
+            return {}
 
     def update(self, table: str, params: dict, data: dict):
         r = self._request("PATCH", table, params=params, json=data)
