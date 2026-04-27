@@ -55,6 +55,11 @@ def main():
 
     ### ===> <====
 
+    if file_type != ".pdf":
+        print(f"non PDF file type is not allowed the file_type passed is {file_type}")
+        raise RuntimeError("Aborting because filetype is not allowed")
+
+
     nc = NeonClient()
 
     ac = BlobServiceClient(
