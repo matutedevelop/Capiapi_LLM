@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 import os
 import shutil
+from unidecode import unidecode
 
 
 class CanvasClient:
@@ -60,7 +61,7 @@ class CanvasClient:
         temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
         if flags is None:
-            flags = ["--no-raw","--dry-run","-d", temp_stage_direction ]
+            flags = ["--no-raw","-d", temp_stage_direction ]
 
         try:
             self._config_file_creator()
@@ -188,16 +189,20 @@ class CanvasClient:
 
                 # want to cut the name of the file at <filename.pdf>
 
-                begining_file_name_idx = row[1].rfind("/") 
+                begining_file_name_idx = row[1].rfind("/") + 1
                 end_file_name_idx = row[1].rfind("(")
-                begining_file_ext_idx = row[1].rfind(".")
+                begining_file_ext_idx = row[1][:end_file_name_idx].rfind(".")
 
                 file_name_slice = slice(begining_file_name_idx,end_file_name_idx)
                 file_ext_slice = slice(begining_file_ext_idx,end_file_name_idx)
 
-                file_name_column.append(row[1][file_name_slice])
-                file_type_column.append(row[1][file_ext_slice])
-                download_url_column.append(row[0])
+                file_name = unidecode(row[1])[file_name_slice]
+                file_type = unidecode(row[1])[file_ext_slice]
+                download_url = row[0]
+
+                file_name_column.append(file_name)
+                file_type_column.append(file_type)
+                download_url_column.append(download_url)
 
             df = pd.DataFrame(
                 {
@@ -233,7 +238,7 @@ class CanvasClient:
             course_folder_direction.mkdir(parents=True, exist_ok=True)
 
             flags = ["-c", course_code, "--no-raw", "-d", temp_stage_direction]
-            self._binary_caller(flags=flags, input=b"y/n")
+            self._binary_caller(flags=flags, input=b"y\n")
 
     def clean_temp_stage(self) -> None:
         temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
