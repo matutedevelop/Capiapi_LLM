@@ -18,3 +18,4 @@ Thumbs.db
 
 # Debezium configuration
 debezium/conf/application.properties
+debezium/data/
