@@ -24,7 +24,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./debezium/conf:/debezium/conf
+      - ./debezium/config:/debezium/config
       - ./debezium/data:/debezium/data
 
 volumes:

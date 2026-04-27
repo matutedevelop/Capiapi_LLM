@@ -74,10 +74,14 @@ def process_document_event(payload: dict):
     Currently logs the event — sync task will be implemented in a future KAN.
     """
     try:
-        op = payload.get("op")  # c=create, u=update, d=delete, r=read
-        table = payload.get("source", {}).get("table")
-        after = payload.get("after")
-        before = payload.get("before")
+        # Debezium HTTP sink sends payload nested under 'payload' key
+        value = payload.get("payload", payload)
+        
+        op = value.get("op")
+        source = value.get("source", {})
+        table = source.get("table") if source else None
+        after = value.get("after")
+        before = value.get("before")
 
         print(f"CDC Event — table: {table}, operation: {op}")
         print(f"  before: {before}")
@@ -85,8 +89,8 @@ def process_document_event(payload: dict):
 
         # Only process INSERT/UPDATE on documents table
         if table == "documents" and op in ("c", "u"):
-            doc_id = after.get("id")
-            loaded = after.get("loaded")
+            doc_id = after.get("id") if after else None
+            loaded = after.get("loaded") if after else None
             print(f"  Document {doc_id} — loaded: {loaded}")
             # TODO: trigger sync task in future KAN
 
