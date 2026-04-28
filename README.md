@@ -62,17 +62,31 @@ cd frontend
 npm install
 npm run dev
 ```
- 
+
+### 8. Start Debezium CDC
+```bash
+# Create your config file from the example
+cp debezium/config/application.properties.example debezium/config/application.properties
+# Fill in your Neon credentials in application.properties
+
+# Start Debezium (uvicorn must be running first)
+docker compose up debezium
+```
+
 ---
  
 ## Project Structure
 Capiapi_LLM/
 ├── api/
 │   ├── __init__.py
-│   └── main.py                    ← FastAPI backend (auth endpoint)
+│   └── main.py                    ← FastAPI backend (auth + CDC endpoints)
 ├── database/
 │   ├── schema.sql
 │   └── fix_public_schema_kan_45.sql
+├── debezium/
+│   ├── config/
+│   │   └── application.properties.example  ← CDC connector config template
+│   └── data/                      ← Debezium offset storage (auto-generated)
 ├── datalake_example/
 │   ├── prueba_collection.py
 │   └── prueba_loadfile.py
@@ -217,3 +231,33 @@ python qdrant/create_collection.py
 # Verify at
 http://localhost:6333/dashboard
 ```
+
+---
+### KAN-53 — Debezium CDC Initialization and Setup (Owen Loza)
+Change Data Capture layer using Debezium Server to monitor real-time changes in the Neon PostgreSQL database and forward events to the FastAPI backend.
+
+**Architecture:**
+Neon PostgreSQL (WAL) → Debezium Server (Docker) → HTTP POST → FastAPI /debezium/events
+
+**What was configured:**
+- Logical replication enabled on Neon (wal_level = logical)
+- Publication `debezium_publication` monitoring tables: documents, courses, users
+- Replication slot `debezium` using pgoutput plugin
+- Dedicated `debezium_role` with replication and SELECT permissions
+
+**Files:**
+- `docker-compose.yml` — includes Debezium Server 3.0 container (quay.io/debezium/server:3.0)
+- `debezium/config/application.properties.example` — connector configuration template (real config excluded via .gitignore)
+- `api/main.py` — includes `POST /debezium/events` endpoint that receives and processes CDC events in the background
+
+**Event format received:**
+- `op: c` — INSERT
+- `op: u` — UPDATE  
+- `op: d` — DELETE
+- `after` — new row state
+- `before` — previous row state (only PK columns by default)
+
+**Note:** The sync task trigger (download Canvas files → process → upload to Vector DB) is planned for a future KAN. The endpoint currently logs events and includes a TODO hook for that integration.
+
+---
+

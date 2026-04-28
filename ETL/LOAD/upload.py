@@ -36,18 +36,20 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--course-id", type=int)
-    parser.add_argument("--file_name", type=str)
-    parser.add_argument("--file_url", type=str)
-    parser.add_argument("--file_type", type=str)
+    parser.add_argument("--file-name", type=str)
+    parser.add_argument("--file-url", type=str)
+    parser.add_argument("--file-type", type=str)
+    parser.add_argument("--raw-content", type=bool)
     args = parser.parse_args()
 
     course_id = args.course_id
     file_name = args.file_name
     file_url = args.file_url
     file_type = args.file_type
+    raw_content = args.file_type
 
     COURSES_TABLE_NAME = "courses"
-    CONTAINER_NAME = os.getenv("AZURE_CONTAINER_RAW")
+    CONTAINER_NAME = os.getenv("AZURE_CONTAINER_RAW") if raw_content else os.getenv("AZURE_CONTAINER_PROCESSED")
 
     dotenv.load_dotenv()
 
@@ -55,7 +57,7 @@ def main():
 
     ### ===> <====
 
-    if file_type != ".pdf":
+    if file_type not in [".pdf",".md"]:
         print(f"non PDF file type is not allowed the file_type passed is {file_type}")
         raise RuntimeError("Aborting because filetype is not allowed")
 
