@@ -187,6 +187,7 @@ class CanvasClient:
                 row = line.split("->")
 
                 # want to cut the name of the file at <filename.pdf>
+<<<<<<< Updated upstream
 
                 begining_file_name_idx = row[1].rfind("/") 
                 end_file_name_idx = row[1].rfind("(")
@@ -198,12 +199,28 @@ class CanvasClient:
                 file_name_column.append(row[1][file_name_slice])
                 file_type_column.append(row[1][file_ext_slice])
                 download_url_column.append(row[0])
+=======
+                end_of_file_name_idx = row[1].rfind("(")
+                extention_begining_idx = row[1].rfind(".")
+
+                file_name_slice = slice(0,end_of_file_name_idx)
+                extention_slice = slice(extention_begining_idx,end_of_file_name_idx)
+
+
+                download_url_column.append(row[0])
+                file_name_column.append(row[1][file_name_slice])
+                file_type_column.append(row[1][extention_slice])
+>>>>>>> Stashed changes
 
             df = pd.DataFrame(
                 {
                     "download_url": download_url_column,
                     "file_name": file_name_column,
+<<<<<<< Updated upstream
                     "file_extention": file_type_column,
+=======
+                    "file_type": file_type_column,
+>>>>>>> Stashed changes
                     "course": [course_code] * len(output[content_slice]),
                 }
             )
@@ -239,7 +256,6 @@ class CanvasClient:
         temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
         if not temp_stage_direction.exists():
-
             print("the temporary stage direction does not exists")
             temp_stage_direction.mkdir(parents=True)
             print(f"temp stage directory was created at {temp_stage_direction}")
@@ -247,7 +263,6 @@ class CanvasClient:
             return
 
         for x in temp_stage_direction.iterdir():
-
             if x.is_dir():
                 shutil.rmtree(x)
             else:

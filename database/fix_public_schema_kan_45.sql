@@ -7,8 +7,18 @@ ALTER TABLE users
 ALTER TABLE courses
     DROP COLUMN canvas_id;
 
+<<<<<<< Updated upstream
 ALTER TABLE users
     ADD COLUMN password VARCHAR(64) NOT NULL;
 
 
+=======
+
+
+ALTER TABLE users
+    ADD COLUMN password VARCHAR(64) NOT NULL DEFAULT '';
+
+
+DELETE * FROM users
+>>>>>>> Stashed changes
 

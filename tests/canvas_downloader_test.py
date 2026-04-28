@@ -33,7 +33,11 @@ canvas_manager = CanvasClient(canvas_api_token, canvas_url)
 #r = canvas_manager.download_course(course_codes)
 
 # Test clean temp_stage 
+<<<<<<< Updated upstream
 #r = canvas_manager.clean_temp_stage()
+=======
+# r = canvas_manager.clean_temp_stage()
+>>>>>>> Stashed changes
 
 #r = canvas_manager._binary_caller()
 

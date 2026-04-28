@@ -2,17 +2,25 @@ from neon_auth.client import NeonClient
 from ETL.EXTRACT.canvas_downloader import CanvasClient
 import argparse
 import pandas as pd
+<<<<<<< Updated upstream
 import time
+=======
+>>>>>>> Stashed changes
 
 import os
 import dotenv
 
 
 def sync_courses(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
+<<<<<<< Updated upstream
+=======
+    canvas_course_names = cc.get_user_courses()
+>>>>>>> Stashed changes
 
     course_table_name = "courses"
     user_courses_table_name = "user_courses"
 
+<<<<<<< Updated upstream
     data_db = nc.select(user_courses_table_name, params={"user_id": f"eq.{user_id}"})
 
     user_courses_db = (
@@ -138,6 +146,28 @@ def main():
     args = parser.parse_args()
 
     user_id = args.user_id
+=======
+    data = nc.select(user_courses_table_name + f"?user_id=eq.{user_id}")
+
+    if isinstance(data, dict):
+        data = [data]
+
+    user_courses_db = pd.DataFrame(data)
+
+    user_courses_canvas = cc.get_user_courses()
+
+    print("=== ==== ==== ===")
+    print(user_courses_db)
+    # print(user_courses_canvas)
+
+
+def main():
+    pass
+
+
+if __name__ == "__main__":
+    pass
+>>>>>>> Stashed changes
 
     dotenv.load_dotenv()
 
@@ -147,6 +177,7 @@ def main():
     cc = CanvasClient(CANVAS_API, CANVAS_URL)
     nc = NeonClient()
 
+<<<<<<< Updated upstream
     sync_courses(cc, nc, user_id)
     sync_documents(cc, nc, user_id)
 
@@ -157,3 +188,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+=======
+    sync_courses(cc,nc,1)
+
+    
+
+>>>>>>> Stashed changes
