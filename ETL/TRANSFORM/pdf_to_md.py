@@ -7,10 +7,12 @@ import dotenv
 import os
 import httpx
 import io
-from azure.storage.blob import BlobServiceClient
 
 
 dotenv.load_dotenv()
+
+
+processed_container_name = os.getenv("AZURE_CONTAINER_PROCESSED")
 
 ac = BlobServiceClient(
     account_url=f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net",
@@ -18,7 +20,8 @@ ac = BlobServiceClient(
 )
 
 
-def download_blob_to_stream(ac, container_name, blob_name):
+
+def download_blob_to_stream(ac, blob_name, container_name=processed_container_name):
     """
     Descarga un blob y devuelve un flujo de bytes en memoria.
     """
