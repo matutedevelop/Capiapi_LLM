@@ -138,5 +138,5 @@ if __name__ == "__main__":
     # Prueba con un curso
     on_new_document(
         course_code="P2025_MAF1121H2",
-        filename="repaso1v1.md"
+        filename="Procedimientos textuales tabla.md"
     )

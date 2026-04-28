@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from neon_auth.client import NeonClient
+from ETL.LOAD.qdrant_loader import on_new_document
 
 app = FastAPI()
 
@@ -91,8 +92,13 @@ def process_document_event(payload: dict):
         if table == "documents" and op in ("c", "u"):
             doc_id = after.get("id") if after else None
             loaded = after.get("loaded") if after else None
+            filename = after.get("filename") if after else None
+            course_code = after.get("course_code") if after else None
             print(f"  Document {doc_id} — loaded: {loaded}")
             # TODO: trigger sync task in future KAN
+
+            # if filename and course_code and not loaded:
+                # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
 
     except Exception as e:
         print(f"Error processing CDC event: {e}")
