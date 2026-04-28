@@ -123,3 +123,29 @@ async def debezium_events(request: Request, background_tasks: BackgroundTasks):
     print(f"Debezium event received: {payload}")
     background_tasks.add_task(process_document_event, payload)
     return {"status": "received"}
+
+# ── SYNC + COURSES ENDPOINTS ──────────────────────────────────────────────────
+
+@app.post("/sync/{user_id}")
+async def trigger_sync(user_id: int, background_tasks: BackgroundTasks):
+    """
+    Triggers a full sync for a given user.
+    Called by the frontend Recargar button.
+    """
+    background_tasks.add_task(sync_user, user_id)
+    return {"status": "sync started", "user_id": user_id}
+
+
+@app.get("/users/{user_id}/courses")
+def get_user_courses(user_id: int):
+    """
+    Returns the courses for a given user from Neon DB.
+    Uses PostgREST join to fetch course details in a single query.
+    """
+    client = NeonClient()
+    result = client.select("user_courses", params={
+        "user_id": f"eq.{user_id}",
+        "select": "course_id,courses(id,code,name)"
+    })
+    courses = [item["courses"] for item in result if item.get("courses")]
+    return {"courses": courses}

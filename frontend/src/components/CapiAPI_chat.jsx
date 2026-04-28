@@ -39,7 +39,7 @@ const CapiLogoWrapper = ({ size = 48, dark = false, style = {} }) => (
 
 // ─── API CONFIG ────────────────────────────────────────────────────────────────
 const API_BASE_URL = "http://localhost:8000";
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const MOCK_COURSES = [
   { id: "1", name: "Cálculo Diferencial", code: "MATH101" },
@@ -61,9 +61,11 @@ const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem("token
 const api = {
   getCourses: async () => {
     if (USE_MOCK) { await delay(400); return MOCK_COURSES; }
-    const res = await fetch(`${API_BASE_URL}/canvas/courses`, { headers: authHeader() });
-    if (!res.ok) throw new Error("Error al obtener cursos");
-    return res.json();
+    const user = JSON.parse(localStorage.getItem("capi_user") || "{}");
+    const res = await fetch(`${API_BASE_URL}/users/${user.id}/courses`, { headers: authHeader() });
+    if (!res.ok) throw new Error("Error al cargar cursos");
+    const data = await res.json();
+    return data.courses;
   },
   sendMessage: async ({ message, courseId, conversationHistory }) => {
     if (USE_MOCK) {
@@ -406,9 +408,14 @@ export default function CapiAPI() {
           {/* Fila 1: Reload + Dark mode */}
           <div style={{ display: "flex", gap: 8 }}>
             <button
-              onClick={() => {
-                // TODO: conectar con backend para recargar archivos de Canvas
-                alert("Recargando archivos de Canvas...");
+              onClick={async () => {
+                const user = JSON.parse(localStorage.getItem("capi_user") || "{}");
+                await fetch(`${API_BASE_URL}/sync/${user.id}`, { 
+                  method: "POST",
+                  headers: authHeader()
+                });
+                const courses = await apiService.getCourses();
+                setCourses(courses);
               }}
               title="Recargar archivos de Canvas"
               style={{ flex: 1, padding: "8px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}

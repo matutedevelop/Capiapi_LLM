@@ -19,3 +19,6 @@ Thumbs.db
 # Debezium configuration
 debezium/conf/application.properties
 debezium/data/
+
+# canvas-downloader tokens
+ETL/EXTRACT/extract-tools/canvas-downloader.toml
