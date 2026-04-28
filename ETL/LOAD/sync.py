@@ -9,6 +9,7 @@ import dotenv
 
 
 def sync_courses(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
+    canvas_course_names = cc.get_user_courses()
 
     course_table_name = "courses"
     user_courses_table_name = "user_courses"
@@ -155,5 +156,12 @@ def main():
     print(f"SYNC RDB TO USER {user_id} DID TAKE {end_time - begining_time}")
 
 
+
+
+
 if __name__ == "__main__":
+
     main()
+
+    
+
