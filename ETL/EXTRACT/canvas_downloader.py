@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import shutil
 from unidecode import unidecode
+import platform
 
 
 class CanvasClient:
@@ -19,7 +20,8 @@ class CanvasClient:
         # Directions
         base_path = Path(__file__).parent / "extract-tools"
         file_directory = base_path / "canvas-downloader.toml"
-        binary_path = base_path / "canvas-downloader"
+        binary_name = "canvas-downloader.exe" if platform.system() == "Windows" else "canvas-downloader"
+        binary_path = base_path / binary_name
 
         # .toml file content
         file_content = (
@@ -73,15 +75,17 @@ class CanvasClient:
         binary_directory = Path(__file__).parent / "extract-tools"
 
         # call without subcommand argument
+        binary_name = "canvas-downloader.exe" if platform.system() == "Windows" else "canvas-downloader"
+
         if input is None:
             result = subprocess.run(
-                [binary_directory / "canvas-downloader", *flags],
+                [binary_directory / binary_name, *flags],
                 capture_output=True,
                 cwd=binary_directory,
             )
         else:
             result = subprocess.run(
-                [binary_directory / "canvas-downloader", *flags],
+                [binary_directory / binary_name, *flags],
                 capture_output=True,
                 input=input,
                 cwd=binary_directory,

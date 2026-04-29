@@ -113,7 +113,7 @@ def on_new_document(course_code: str, filename: str) -> None:
     Downloads the .md file from canvas-procesado and uploads it to Qdrant.
 
     Parameters:
-        course_code: course code, e.g., ‘O2024_DEL34E6’
+        course_code: course code, e.g., 'O2024_DEL34E6'
         filename: file name, e.g., 'syllabus.md'
     """
     container = os.getenv("AZURE_CONTAINER_PROCESSED")

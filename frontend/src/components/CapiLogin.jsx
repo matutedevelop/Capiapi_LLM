@@ -29,6 +29,12 @@ const authService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, canvas_token: canvasToken }),
     });
+    if (res.status === 428) {
+      const err = await res.json().catch(() => ({}));
+      const e = new Error(err.detail?.message || "Canvas token required");
+      e.needsCanvasToken = true;
+      throw e;
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || "Credenciales incorrectas o token inválido");
@@ -111,15 +117,16 @@ export default function CapiLogin({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [needsToken, setNeedsToken] = useState(false);
 
   const set = field => val => setForm(f => ({ ...f, [field]: val }));
 
   const validate = () => {
     const e = {};
-    if (!form.email.trim())       e.email       = "El correo es requerido";
-    else if (!form.email.includes("@")) e.email = "Ingresa un correo válido";
-    if (!form.password.trim())    e.password    = "La contraseña es requerida";
-    if (!form.canvasToken.trim()) e.canvasToken = "El token de Canvas es requerido";
+    if (!form.email.trim())            e.email    = "El correo es requerido";
+    else if (!form.email.includes("@")) e.email   = "Ingresa un correo válido";
+    if (!form.password.trim())         e.password = "La contraseña es requerida";
+    if (needsToken && !form.canvasToken.trim()) e.canvasToken = "El token de Canvas es requerido";
     return e;
   };
 
@@ -136,7 +143,12 @@ export default function CapiLogin({ onLoginSuccess }) {
       saveSession(data);
       onLoginSuccess(data);
     } catch (err) {
-      setGlobalError(err.message || "Error al iniciar sesión. Verifica tus datos.");
+      if (err.needsCanvasToken) {
+        setNeedsToken(true);
+        setGlobalError("Usuario nuevo — ingresa tu token de Canvas para registrarte.");
+      } else {
+        setGlobalError(err.message || "Error al iniciar sesión. Verifica tus datos.");
+      }
     } finally {
       setLoading(false);
     }
@@ -246,17 +258,19 @@ export default function CapiLogin({ onLoginSuccess }) {
           />
 
           {/* Token de Canvas */}
-          <Field
-            label="Token de Canvas"
-            type={showToken ? "text" : "password"}
-            value={form.canvasToken}
-            onChange={set("canvasToken")}
-            placeholder="12734~CWPyxJJ..."
-            error={errors.canvasToken}
-            icon="🔑"
-            hint="Encuéntralo en Canvas → Configuración de cuenta → Token de acceso"
-            extraRight={<EyeBtn show={showToken} onToggle={() => setShowToken(s => !s)} />}
-          />
+          {needsToken && (
+            <Field
+              label="Token de Canvas"
+              type={showToken ? "text" : "password"}
+              value={form.canvasToken}
+              onChange={set("canvasToken")}
+              placeholder="12734~CWPyxJJ..."
+              error={errors.canvasToken}
+              icon="🔑"
+              hint="Encuéntralo en Canvas → Configuración de cuenta → Token de acceso"
+              extraRight={<EyeBtn show={showToken} onToggle={() => setShowToken(s => !s)} />}
+            />
+          )}
         </div>
 
         {/* Error global */}

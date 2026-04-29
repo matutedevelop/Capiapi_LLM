@@ -1,9 +1,11 @@
 import bcrypt
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from neon_auth.client import NeonClient
-from ETL.LOAD.qdrant_loader import on_new_document
+from ETL.LOAD.sync import sync_user
+from ETL.LOAD.qdrant_query import ask
 
 app = FastAPI()
 
@@ -17,7 +19,7 @@ app.add_middleware(
 class LoginRequest(BaseModel):
     email: str
     password: str
-    canvas_token: str
+    canvas_token: str = ""
 
 @app.post("/auth/login")
 def login(req: LoginRequest):
@@ -38,9 +40,16 @@ def login(req: LoginRequest):
             user["password"].encode("utf-8")
         )
         if not password_match:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
     else:
-        # User does not exist — create new user
+        # User does not exist — canvas token required
+        if not req.canvas_token or not req.canvas_token.strip():
+            raise HTTPException(
+                status_code=428,
+                detail={"needs_canvas_token": True, "message": "Canvas token required for new users"}
+            )
+
+        # Create new user
         password_hash = bcrypt.hashpw(
             req.password.encode("utf-8"),
             bcrypt.gensalt()
@@ -72,12 +81,12 @@ def login(req: LoginRequest):
 def process_document_event(payload: dict):
     """
     Background task that processes CDC events from Debezium.
-    Currently logs the event — sync task will be implemented in a future KAN.
+    Triggers sync_user() when a new user INSERT is detected.
     """
     try:
         # Debezium HTTP sink sends payload nested under 'payload' key
         value = payload.get("payload", payload)
-        
+
         op = value.get("op")
         source = value.get("source", {})
         table = source.get("table") if source else None
@@ -88,14 +97,21 @@ def process_document_event(payload: dict):
         print(f"  before: {before}")
         print(f"  after: {after}")
 
-        # Only process INSERT/UPDATE on documents table
+        # New user detected — trigger sync
+        if table == "users" and op == "c":
+            user_id = after.get("id") if after else None
+            if user_id:
+                print(f"  New user detected (id={user_id}), triggering sync...")
+                sync_user(user_id)
+
+        # Document inserted or updated
         if table == "documents" and op in ("c", "u"):
             doc_id = after.get("id") if after else None
             loaded = after.get("loaded") if after else None
             filename = after.get("filename") if after else None
             course_code = after.get("course_code") if after else None
             print(f"  Document {doc_id} — loaded: {loaded}")
-            # TODO: trigger sync task in future KAN
+            # TODO: trigger document processing pipeline in future KAN
 
             # if filename and course_code and not loaded:
                 # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
@@ -114,3 +130,43 @@ async def debezium_events(request: Request, background_tasks: BackgroundTasks):
     print(f"Debezium event received: {payload}")
     background_tasks.add_task(process_document_event, payload)
     return {"status": "received"}
+
+# ── SYNC + COURSES ENDPOINTS ──────────────────────────────────────────────────
+
+@app.post("/sync/{user_id}")
+async def trigger_sync(user_id: int, background_tasks: BackgroundTasks):
+    """
+    Triggers a full sync for a given user.
+    Called by the frontend Recargar button.
+    """
+    background_tasks.add_task(sync_user, user_id)
+    return {"status": "sync started", "user_id": user_id}
+
+
+@app.get("/users/{user_id}/courses")
+def get_user_courses(user_id: int):
+    """
+    Returns the courses for a given user from Neon DB.
+    Uses PostgREST join to fetch course details in a single query.
+    """
+    client = NeonClient()
+    result = client.select("user_courses", params={
+        "user_id": f"eq.{user_id}",
+        "select": "course_id,courses(id,code,name)"
+    })
+    courses = [item["courses"] for item in result if item.get("courses")]
+    return {"courses": courses}
+
+
+# ── QDRANT QUERY ──────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    course_code: str
+    question: str
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+    return StreamingResponse(
+        ask(req.course_code, req.question),
+        media_type="text/plain"
+    )
