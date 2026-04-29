@@ -14,23 +14,23 @@ ollama_client = ollama.Client(host=os.getenv("OLLAMA_HOST", "http://localhost:11
 
 def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     """
-    Busca los chunks más relevantes para una pregunta en la colección del curso.
+    Searches the course collection for the most relevant chunks related to a question.
     
-    Parámetros:
-        course_code: código del curso ej. 'P2025_MAF1121H2'
-        question: pregunta del usuario
-        top_k: número de chunks a retornar
+    Parameters:
+        course_code: course code, e.g., 'P2025_MAF1121H2'
+        question: user's question
+        top_k: number of chunks to return
     """
     collection_name = get_collection_name(course_code)
 
-    # Embed la pregunta — usamos RETRIEVAL_QUERY para búsquedas
+    # Embed the question 
     query_embedding = genai_client.models.embed_content(
         model="gemini-embedding-001",
         contents=question,
         config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
     ).embeddings[0].values
 
-    # Buscar en Qdrant
+    # search Qdrant
     results = client.query_points(
         collection_name=collection_name,
         query=query_embedding,
@@ -51,13 +51,13 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
 
 def ask(course_code: str, question: str) -> str:
     """
-    Hace una pregunta sobre un curso y retorna la respuesta del LLM.
+    You ask a question about a course, and the LLM returns the answer.
     """
-    # Recuperar contexto relevante
+    # Retrieve relevant context
     chunks = query_course(course_code, question)
 
     if not chunks:
-        yield "No encontré información relevante para tu pregunta."
+        yield "I couldn't find any relevant information for your question."
         return
 
     context = "\n\n".join([f"[{c['filename']}]\n{c['text']}" for c in chunks])
