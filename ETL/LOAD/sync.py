@@ -129,15 +129,12 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
 
 
 
-def main():
-
-    begining_time = time.time()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--user-id", type=int)
-    args = parser.parse_args()
-
-    user_id = args.user_id
+def sync_user(user_id: int) -> None:
+    """
+    Syncs courses and documents for a given user.
+    Can be called from FastAPI or from the CLI.
+    """
+    beginning_time = time.time()
 
     dotenv.load_dotenv()
 
@@ -151,8 +148,15 @@ def main():
     sync_documents(cc, nc, user_id)
 
     end_time = time.time()
+    print(f"SYNC RDB TO USER {user_id} DID TAKE {end_time - beginning_time}")
 
-    print(f"SYNC RDB TO USER {user_id} DID TAKE {end_time - begining_time}")
+
+def main():
+    """CLI entry point - maintains backward compatibility."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--user-id", type=int, required=True)
+    args = parser.parse_args()
+    sync_user(args.user_id)
 
 
 if __name__ == "__main__":
