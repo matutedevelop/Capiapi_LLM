@@ -61,9 +61,11 @@ const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem("token
 const api = {
   getCourses: async () => {
     if (USE_MOCK) { await delay(400); return MOCK_COURSES; }
-    const res = await fetch(`${API_BASE_URL}/canvas/courses`, { headers: authHeader() });
-    if (!res.ok) throw new Error("Error al obtener cursos");
-    return res.json();
+    const user = JSON.parse(localStorage.getItem("capi_user") || "{}");
+    const res = await fetch(`${API_BASE_URL}/users/${user.id}/courses`, { headers: authHeader() });
+    if (!res.ok) throw new Error("Error al cargar cursos");
+    const data = await res.json();
+    return data.courses;
   },
   sendMessage: async ({ message, courseId, conversationHistory }) => {
     if (USE_MOCK) {
@@ -402,13 +404,48 @@ export default function CapiAPI() {
           </div>
         )}
 
-        <div style={{ padding: "0.8rem 1rem", borderTop: "2px solid var(--divider)", display: "flex", gap: 8 }}>
-          <button onClick={() => setMessages([])} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
-            Limpiar chat
-          </button>
-          <button onClick={() => setDark(d => !d)} style={{ padding: "8px 12px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 16, cursor: "pointer" }}>
-            {dark ? "☀️" : "🌙"}
-          </button>
+        <div style={{ padding: "0.8rem 1rem", borderTop: "2px solid var(--divider)", display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Fila 1: Reload + Dark mode */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={async () => {
+                const user = JSON.parse(localStorage.getItem("capi_user") || "{}");
+                await fetch(`${API_BASE_URL}/sync/${user.id}`, { 
+                  method: "POST",
+                  headers: authHeader()
+                });
+                const courses = await apiService.getCourses();
+                setCourses(courses);
+              }}
+              title="Recargar archivos de Canvas"
+              style={{ flex: 1, padding: "8px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--capi-accent-bg)"; e.currentTarget.style.color = "var(--capi-brown)"; e.currentTarget.style.borderColor = "var(--capi-brown)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--capi-border)"; }}
+            >
+              🔄 Recargar
+            </button>
+            <button onClick={() => setDark(d => !d)} title="Cambiar tema" style={{ padding: "8px 12px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 16, cursor: "pointer" }}>
+              {dark ? "☀️" : "🌙"}
+            </button>
+          </div>
+          {/* Fila 2: Limpiar + Cerrar sesión */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setMessages([])} style={{ flex: 1, padding: "8px", borderRadius: 9, border: "2px solid var(--capi-border)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              Limpiar chat
+            </button>
+            <button
+              onClick={() => {
+                ["capi_token","capi_user","capi_courses"].forEach(k => localStorage.removeItem(k));
+                window.location.reload();
+              }}
+              title="Cerrar sesión"
+              style={{ padding: "8px 12px", borderRadius: 9, border: "2px solid #F09595", background: "transparent", color: dark ? "#F09595" : "#C0392B", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
+              onMouseEnter={e => { e.currentTarget.style.background = dark ? "rgba(220,38,38,.1)" : "#FFF0F0"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              Salir 🚪
+            </button>
+          </div>
         </div>
       </div>
 
