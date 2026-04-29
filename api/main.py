@@ -6,11 +6,11 @@ from pydantic import BaseModel
 from neon_auth.client import NeonClient
 from ETL.LOAD.upload import upload_file
 from ETL.TRANSFORM.pdf_to_md import process_pdf_blob
-
 import os
 import dotenv
 from ETL.LOAD.sync import sync_user
 from ETL.LOAD.qdrant_query import ask
+from ETL.LOAD.qdrant_loader import on_new_document
 
 app = FastAPI()
 
@@ -55,7 +55,10 @@ def login(req: LoginRequest):
         if not req.canvas_token or not req.canvas_token.strip():
             raise HTTPException(
                 status_code=428,
-                detail={"needs_canvas_token": True, "message": "Canvas token required for new users"}
+                detail={
+                    "needs_canvas_token": True,
+                    "message": "Canvas token required for new users",
+                },
             )
 
         # Create new user
@@ -116,46 +119,94 @@ def process_document_event(payload: dict):
                 print(f"  New user detected (id={user_id}), triggering sync...")
                 sync_user(user_id)
 
-        # Document inserted or updated
         if table == "documents" and op in ("c", "u"):
-            doc_id = after.get("id") if after else None
-            loaded = after.get("loaded") if after else None
-            filename = after.get("filename") if after else None
-            course_code = after.get("course_code") if after else None
-            print(f"  Document {doc_id} — loaded: {loaded}")
-            # TODO: trigger document processing pipeline in future KAN
-
-            # if filename and course_code and not loaded:
-                # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
-
-            # =<><><><><><><><><<><><><><><><><><><
+            # Guard
+            if not after:
+                return
 
             dotenv.load_dotenv()
+
+            # Extract fields
+            doc_id = after.get("id")
+            loaded = after.get("loaded")
+            filename = after.get("filename")
+            file_url = after.get("file_url")
+            file_type = after.get("file_type")
+            course_id = after.get("course_id")
+
+            print(f"  Document {doc_id} — loaded: {loaded}")
+
+            # Clients & env
             ac = NeonClient()
-            raw_container = os.getenv("AZURE_CONTAINER_RAW")
             canvas_api = os.getenv("CANVAS_API_TOKEN")
-            course_code = ac.select(
-                "courses", params={"id": f"eq.{after.get('course_id')}"}
-            )[0]["code"]
+            raw_container = os.getenv("AZURE_CONTAINER_RAW")
 
-            blob_name = f"{raw_container}/{course_code}/{after.get('filename')}"
+            # Resolve course code
+            course_code = ac.select("courses", params={"id": f"eq.{course_id}"})[0][
+                "code"
+            ]
+            blob_name = f"{raw_container}/{course_code}/{filename}"
 
+            # Pipeline: Canvas → Raw → Processed → VDB
             upload_file(
                 ac=ac,
                 container_name=raw_container,
-                file_name=after.get("filename"),
-                file_url=after.get("file_url"),
+                file_name=filename,
+                file_url=file_url,
                 course_code=course_code,
-                file_type=after.get("file_type"),
+                file_type=file_type,
                 canvas_api=canvas_api,
             )
-
             process_pdf_blob(blob_name)
 
+            if filename and course_code and not loaded:
+                on_new_document(course_code, filename)
 
-            ac.update("documents", data={"loaded": True}, params={"id": f"eq.{doc_id}"})
+            ac.update(
+                "documents", data={"loaded": True}, params={"id": f"eq.{doc_id}"}
+            )
 
-            # =<><><><><><><><><<><><><><><><><><><
+
+        # Document inserted or updated
+        # if table == "documents" and op in ("c", "u"):
+        #     doc_id = after.get("id") if after else None
+        #     loaded = after.get("loaded") if after else None
+        #     filename = after.get("filename") if after else None
+        #     course_code = after.get("course_code") if after else None
+        #     print(f"  Document {doc_id} — loaded: {loaded}")
+        #     # TODO: trigger document processing pipeline in future KAN
+        #
+        #
+        #     # =<><><><><><><><><<><><><><><><><><><
+        #
+        #     dotenv.load_dotenv()
+        #     ac = NeonClient()
+        #     raw_container = os.getenv("AZURE_CONTAINER_RAW")
+        #     canvas_api = os.getenv("CANVAS_API_TOKEN")
+        #     course_code = ac.select(
+        #         "courses", params={"id": f"eq.{after.get('course_id')}"}
+        #     )[0]["code"]
+        #
+        #     blob_name = f"{raw_container}/{course_code}/{after.get('filename')}"
+        #
+        #     upload_file(
+        #         ac=ac,
+        #         container_name=raw_container,
+        #         file_name=after.get("filename"),
+        #         file_url=after.get("file_url"),
+        #         course_code=course_code,
+        #         file_type=after.get("file_type"),
+        #         canvas_api=canvas_api,
+        #     )
+        #
+        #     process_pdf_blob(blob_name)
+        #
+        #     if filename and course_code and not loaded:
+        #         on_new_document(course_code, filename) # this is after parsing - load a file to the vdb
+        #
+        #     ac.update("documents", data={"loaded": True}, params={"id": f"eq.{doc_id}"})
+
+        # =<><><><><><><><><<><><><><><><><><><
 
     except Exception as e:
         print(f"Error processing CDC event: {e}")
@@ -172,7 +223,9 @@ async def debezium_events(request: Request, background_tasks: BackgroundTasks):
     background_tasks.add_task(process_document_event, payload)
     return {"status": "received"}
 
+
 # ── SYNC + COURSES ENDPOINTS ──────────────────────────────────────────────────
+
 
 @app.post("/sync/{user_id}")
 async def trigger_sync(user_id: int, background_tasks: BackgroundTasks):
@@ -191,23 +244,27 @@ def get_user_courses(user_id: int):
     Uses PostgREST join to fetch course details in a single query.
     """
     client = NeonClient()
-    result = client.select("user_courses", params={
-        "user_id": f"eq.{user_id}",
-        "select": "course_id,courses(id,code,name)"
-    })
+    result = client.select(
+        "user_courses",
+        params={
+            "user_id": f"eq.{user_id}",
+            "select": "course_id,courses(id,code,name)",
+        },
+    )
     courses = [item["courses"] for item in result if item.get("courses")]
     return {"courses": courses}
 
 
 # ── QDRANT QUERY ──────────────────────────────────────────────────
 
+
 class ChatRequest(BaseModel):
     course_code: str
     question: str
 
+
 @app.post("/chat")
 def chat(req: ChatRequest):
     return StreamingResponse(
-        ask(req.course_code, req.question),
-        media_type="text/plain"
+        ask(req.course_code, req.question), media_type="text/plain"
     )
