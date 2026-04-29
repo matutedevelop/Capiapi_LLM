@@ -20,14 +20,18 @@ def upload_file(
     ac: BlobServiceClient,
     container_name: str,
     file_name: str,
+    file_url :str,
     course_code: str,
     file_type: str,
-    content: bytes,
+    canvas_api:str
 ) -> None:
+    content_to_upload = download_file(
+        file_name=file_name, file_url=file_url, canvas_token=canvas_api
+    )
     blob = ac.get_blob_client(
         container_name, f"{course_code}/{file_type}/{file_name}"
     )
-    blob.upload_blob(content, overwrite=True)
+    blob.upload_blob(content_to_upload, overwrite=True)
 
 
 def main():

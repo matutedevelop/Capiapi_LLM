@@ -4,6 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from neon_auth.client import NeonClient
+from ETL.LOAD.upload import upload_file
+from ETL.TRANSFORM.pdf_to_md import process_pdf_blob
+
+import os
+import dotenv
 from ETL.LOAD.sync import sync_user
 from ETL.LOAD.qdrant_query import ask
 
@@ -16,28 +21,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class LoginRequest(BaseModel):
     email: str
     password: str
     canvas_token: str = ""
+
 
 @app.post("/auth/login")
 def login(req: LoginRequest):
     client = NeonClient()
 
     # 1. Check if user exists
-    users = client.select("users", params={
-        "email": f"eq.{req.email}",
-        "select": "id,email,password,canvas_api_token,created_at"
-    })
+    users = client.select(
+        "users",
+        params={
+            "email": f"eq.{req.email}",
+            "select": "id,email,password,canvas_api_token,created_at",
+        },
+    )
     print("SELECT RESPONSE:", users)
 
     if users and isinstance(users, list) and len(users) > 0:
         # User exists — verify password
         user = users[0]
         password_match = bcrypt.checkpw(
-            req.password.encode("utf-8"),
-            user["password"].encode("utf-8")
+            req.password.encode("utf-8"), user["password"].encode("utf-8")
         )
         if not password_match:
             raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -51,15 +60,17 @@ def login(req: LoginRequest):
 
         # Create new user
         password_hash = bcrypt.hashpw(
-            req.password.encode("utf-8"),
-            bcrypt.gensalt()
+            req.password.encode("utf-8"), bcrypt.gensalt()
         ).decode("utf-8")
 
-        user = client.insert("users", {
-            "email": req.email,
-            "password": password_hash,
-            "canvas_api_token": req.canvas_token,
-        })
+        user = client.insert(
+            "users",
+            {
+                "email": req.email,
+                "password": password_hash,
+                "canvas_api_token": req.canvas_token,
+            },
+        )
         print("INSERT RESPONSE:", user)
         if isinstance(user, list):
             user = user[0]
@@ -77,6 +88,7 @@ def login(req: LoginRequest):
 
 
 # ── DEBEZIUM CDC ENDPOINT ─────────────────────────────────────────────────────
+
 
 def process_document_event(payload: dict):
     """
@@ -115,6 +127,35 @@ def process_document_event(payload: dict):
 
             # if filename and course_code and not loaded:
                 # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
+
+            # =<><><><><><><><><<><><><><><><><><><
+
+            dotenv.load_dotenv()
+            ac = NeonClient()
+            raw_container = os.getenv("AZURE_CONTAINER_RAW")
+            canvas_api = os.getenv("CANVAS_API_TOKEN")
+            course_code = ac.select(
+                "courses", params={"id": f"eq.{after.get('course_id')}"}
+            )[0]["code"]
+
+            blob_name = f"{raw_container}/{course_code}/{after.get('filename')}"
+
+            upload_file(
+                ac=ac,
+                container_name=raw_container,
+                file_name=after.get("filename"),
+                file_url=after.get("file_url"),
+                course_code=course_code,
+                file_type=after.get("file_type"),
+                canvas_api=canvas_api,
+            )
+
+            process_pdf_blob(blob_name)
+
+
+            ac.update("documents", data={"loaded": True}, params={"id": f"eq.{doc_id}"})
+
+            # =<><><><><><><><><<><><><><><><><><><
 
     except Exception as e:
         print(f"Error processing CDC event: {e}")

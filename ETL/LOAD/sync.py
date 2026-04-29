@@ -9,6 +9,7 @@ import dotenv
 
 
 def sync_courses(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
+    canvas_course_names = cc.get_user_courses()
 
     course_table_name = "courses"
     user_courses_table_name = "user_courses"
@@ -159,5 +160,12 @@ def main():
     sync_user(args.user_id)
 
 
+
+
+
 if __name__ == "__main__":
+
     main()
+
+    
+
