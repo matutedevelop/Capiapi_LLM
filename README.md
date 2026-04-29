@@ -73,6 +73,7 @@ cp debezium/config/application.properties.example debezium/config/application.pr
 docker compose up debezium
 ```
 
+
 ---
  
 ## Project Structure
@@ -279,6 +280,8 @@ Canvas course sync pipeline connecting the Canvas API to the Neon PostgreSQL dat
 4. Frontend displays the synced courses via `GET /users/{user_id}/courses`
 
 **Note:** The `canvas-downloader` binary is platform-aware and runs natively on Linux (Docker) and Windows. Document sync (`sync_documents`) is functional on Linux; full end-to-end tested in the Docker environment.
+
+---
 
 
 
