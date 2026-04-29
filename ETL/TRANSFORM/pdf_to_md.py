@@ -1,6 +1,5 @@
 from azure.storage.blob import BlobServiceClient
 from docling.document_converter import DocumentConverter
-from docling.chunking import HybridChunker
 from ETL.LOAD.upload import upload_file
 import argparse
 import tempfile
@@ -51,40 +50,11 @@ def get_confidence_score(result) -> float:
     return round(sum(scores) / len(scores), 4)
 
 
-# ─── CHUNKING ─────────────────────────────────────────────────────────────────
-def apply_chunking(result) -> tuple[int, str]:
-    """
-    Aplica chunking al documento.
-    Retorna (total de chunks, chunks en formato Markdown)
-    """
-    chunker = HybridChunker()
-    chunks  = list(chunker.chunk(result.document))
-
-    md_lines = ["# Chunks\n"]
-
-    for i, chunk in enumerate(chunks):
-        headings = chunk.meta.headings if chunk.meta else []
-        try:
-            page = chunk.meta.doc_items[0].prov[0].page_no \
-                   if chunk.meta and chunk.meta.doc_items \
-                   and chunk.meta.doc_items[0].prov else None
-        except Exception:
-            page = None
-
-        heading_str = " > ".join(headings) if headings else "Sin encabezado"
-        page_str    = f"Página {page}" if page else "Página desconocida"
-        md_lines.append(f"## Chunk {i + 1} — {heading_str} ({page_str})\n")
-        md_lines.append(f"{chunk.text}\n")
-        md_lines.append("---\n")
-
-    return len(chunks), "\n".join(md_lines)
-
-
 # ─── TRANSFORM ────────────────────────────────────────────────────────────────
 def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
     """
     Convierte un stream de bytes PDF a Markdown usando docling.
-    Retorna (markdown, confidence, total_chunks, chunks_md) o Nones si falla.
+    Retorna (markdown, confidence) o (None, None) si falla.
     """
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
     try:
@@ -95,17 +65,15 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
         result     = converter.convert(tmp_path)
         markdown   = result.document.export_to_markdown()
         confidence = get_confidence_score(result)
-        total_chunks, chunks_md = apply_chunking(result)
 
         print(f"  Confidence score : {confidence:.2%}")
-        print(f"  Chunks generados : {total_chunks}")
         print(f"  Conversion completada: {filename}")
 
-        return markdown, confidence, total_chunks, chunks_md
+        return markdown, confidence
 
     except Exception as e:
         print(f"Error al convertir {filename}: {e}")
-        return None, None, None, None
+        return None, None
 
     finally:
         if os.path.exists(tmp_path):
@@ -118,10 +86,8 @@ def process_pdf_blob(blob_name: str) -> bool:
     Pipeline completo:
         1. Descarga PDF del contenedor RAW
         2. Convierte a Markdown con docling
-        3. Imprime confidence score y numero de chunks
-        4. Sube 2 archivos al contenedor PROCESSED:
-            - {nombre}.md        → Markdown completo
-            - {nombre}_chunks.md → Chunks en formato Markdown
+        3. Imprime confidence score
+        4. Sube el .md al contenedor PROCESSED
     """
     print(f"\n{'='*50}")
     print(f"Procesando: {blob_name}")
@@ -135,34 +101,23 @@ def process_pdf_blob(blob_name: str) -> bool:
     # 2. Convertir
     filename    = blob_name.split("/")[-1]
     course_code = blob_name.split("/")[0]
-    markdown, confidence, total_chunks, chunks_md = convert_stream_to_markdown(byte_stream, filename)
+    markdown, confidence = convert_stream_to_markdown(byte_stream, filename)
 
     if markdown is None:
         print(f"[ERROR] No se pudo convertir {blob_name}")
         return False
 
-    base_name      = filename.rsplit(".", 1)[0]
-    md_filename    = base_name + ".md"
-    chunks_md_file = base_name + "_chunks.md"
-
-    # 3. Subir Markdown completo
+    # 3. Subir Markdown
+    md_filename = filename.rsplit(".", 1)[0] + ".md"
     upload_file(
         ac=ac, container_name=processed_container_name,
         file_name=md_filename, course_code=course_code,
         file_type=".md", content=markdown.encode("utf-8"),
     )
 
-    # 4. Subir chunks en Markdown
-    upload_file(
-        ac=ac, container_name=processed_container_name,
-        file_name=chunks_md_file, course_code=course_code,
-        file_type=".md", content=chunks_md.encode("utf-8"),
-    )
-
     print(f"[OK] {blob_name}")
-    print(f"     Markdown        : {course_code}/.md/{md_filename}")
-    print(f"     Chunks Markdown : {course_code}/.md/{chunks_md_file}")
-    print(f"     Confidence      : {confidence:.2%}")
+    print(f"     Markdown   : {course_code}/.md/{md_filename}")
+    print(f"     Confidence : {confidence:.2%}")
     return True
 
 
