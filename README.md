@@ -233,6 +233,7 @@ http://localhost:6333/dashboard
 ```
 
 ---
+
 ### KAN-53 — Debezium CDC Initialization and Setup (Owen Loza)
 Change Data Capture layer using Debezium Server to monitor real-time changes in the Neon PostgreSQL database and forward events to the FastAPI backend.
 
@@ -260,4 +261,24 @@ Neon PostgreSQL (WAL) → Debezium Server (Docker) → HTTP POST → FastAPI /de
 **Note:** The sync task trigger (download Canvas files → process → upload to Vector DB) is planned for a future KAN. The endpoint currently logs events and includes a TODO hook for that integration.
 
 ---
+### KAN-67 — Sync Database (Owen Loza)
+Canvas course sync pipeline connecting the Canvas API to the Neon PostgreSQL database via the ELT layer.
+
+**What was implemented:**
+- `ETL/LOAD/sync.py` — `sync_user(user_id)` reusable function that fetches the user's Canvas courses and syncs them to the `courses` and `user_courses` tables
+- `ETL/EXTRACT/canvas_downloader.py` — `CanvasClient` class wrapping the `canvas-downloader` binary with cross-platform support (Linux/Windows via `platform.system()`)
+- `api/main.py` — two new endpoints:
+  - `POST /sync/{user_id}` — manually triggers `sync_user()` as a background task (called by the Recargar button in the frontend)
+  - `GET /users/{user_id}/courses` — returns the user's synced courses via a PostgREST join on `user_courses + courses`
+- `frontend/src/components/CapiAPI_chat.jsx` — Recargar button connected to `POST /sync/{user_id}`, courses rendered from `GET /users/{user_id}/courses`
+
+**Sync flow:**
+1. User logs in → `sync_user(user_id)` is triggered automatically via the CDC endpoint (Debezium INSERT on users)
+2. `CanvasClient` calls the `canvas-downloader` binary with the user's Canvas token
+3. Courses are fetched and upserted into `courses` and `user_courses` tables
+4. Frontend displays the synced courses via `GET /users/{user_id}/courses`
+
+**Note:** The `canvas-downloader` binary is platform-aware and runs natively on Linux (Docker) and Windows. Document sync (`sync_documents`) is functional on Linux; full end-to-end tested in the Docker environment.
+
+
 
