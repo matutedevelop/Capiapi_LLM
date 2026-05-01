@@ -17,15 +17,33 @@ services:
       timeout: 5s
       retries: 5
 
-  debezium:
-    image: quay.io/debezium/server:3.0
-    container_name: debezium
+  # debezium:
+  #   image: quay.io/debezium/server:3.0
+  #   container_name: debezium
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./debezium/config:/debezium/config
+  #     - ./debezium/data:/debezium/data
+
+  
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: capiapi-api
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8000:8000"
+    env_file:
+      - .env
     volumes:
-      - ./debezium/config:/debezium/config
-      - ./debezium/data:/debezium/data
+      - .:/app
+    depends_on:
+    - qdrant
+
+
 
 volumes:
   qdrant_storage:
