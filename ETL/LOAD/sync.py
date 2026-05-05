@@ -130,7 +130,7 @@ def sync_documents(cc: CanvasClient, nc: NeonClient, user_id: int) -> None:
 
 
 
-def sync_user(user_id: int) -> None:
+def sync_user(user_id: int,nc:NeonClient,cc:CanvasClient) -> None:
     """
     Syncs courses and documents for a given user.
     Can be called from FastAPI or from the CLI.
@@ -139,11 +139,11 @@ def sync_user(user_id: int) -> None:
 
     dotenv.load_dotenv()
 
-    CANVAS_API = os.getenv("CANVAS_API_TOKEN")
-    CANVAS_URL = os.getenv("CANVAS_URL")
+    # CANVAS_API = os.getenv("CANVAS_API_TOKEN")
+    # CANVAS_URL = os.getenv("CANVAS_URL")
 
-    cc = CanvasClient(CANVAS_API, CANVAS_URL)
-    nc = NeonClient()
+    # cc = CanvasClient(CANVAS_API, CANVAS_URL)
+    # nc = NeonClient()
 
     sync_courses(cc, nc, user_id)
     sync_documents(cc, nc, user_id)

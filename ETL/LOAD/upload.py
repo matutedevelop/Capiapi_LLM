@@ -5,6 +5,7 @@ import dotenv
 import os
 from azure.storage.blob import BlobServiceClient
 import httpx
+import asyncio
 
 
 def download_file(file_name: str, file_url: str, canvas_token: str) -> bytes:
@@ -25,6 +26,7 @@ def upload_file(
     file_type: str,
     canvas_api:str
 ) -> None:
+
     content_to_upload = download_file(
         file_name=file_name, file_url=file_url, canvas_token=canvas_api
     )
@@ -32,6 +34,59 @@ def upload_file(
         container_name, f"{course_code}/{file_type}/{file_name}"
     )
     blob.upload_blob(content_to_upload, overwrite=True)
+
+
+async def upload_user_files(
+    nc: NeonClient,
+    ac: BlobServiceClient,
+    canvas_api: str,
+    user_id: int
+):
+    # Get user courses
+    user_courses = nc.select("user_courses", params={"user_id": f"eq.{user_id}"})
+    if not user_courses:
+        print(f"[upload_user_files] No courses found for user {user_id}")
+        return
+
+    course_ids = [uc["course_id"] for uc in user_courses]
+
+    # get courses codes
+    courses = nc.select("courses", params={"id": f"in.({','.join(map(str, course_ids))})"})
+    course_map = {c["id"]: c["code"] for c in courses}
+
+    # TODO: Extend to more than pdfs
+    ALLOWED_TYPES = [".pdf", ".docx", ".pptx", ".md"]
+
+    documents = nc.select("documents", params={
+        "course_id": f"in.({','.join(map(str, course_ids))})",
+        "file_type": f"in.({','.join(ALLOWED_TYPES)})"
+    })
+
+    if not documents:
+        print(f"[upload_user_files] No documents found for user {user_id}")
+        return
+
+    # upload asyncronus 
+    semaphore = asyncio.Semaphore(5)
+
+    async def upload_one(doc):
+        async with semaphore:
+            course_code = course_map.get(doc["course_id"])
+            if not course_code:
+                print(f"[upload_user_files] No course_code for course_id {doc['course_id']}")
+                return
+            upload_file(
+                ac=ac,
+                container_name=os.getenv("AZURE_CONTAINER_RAW"),
+                file_name=doc["filename"],
+                file_url=doc["file_url"],
+                course_code=course_code,
+                file_type=doc["file_type"],
+                canvas_api=canvas_api,
+            )
+
+    await asyncio.gather(*[upload_one(doc) for doc in documents], return_exceptions=True)
+
 
 
 def main():
@@ -61,8 +116,9 @@ def main():
 
     ### ===> <====
 
-    if file_type not in [".pdf",".md"]:
-        print(f"non PDF file type is not allowed the file_type passed is {file_type}")
+    ALLOWED_TYPES = [".pdf", ".docx", ".pptx", ".md"]
+    if file_type not in ALLOWED_TYPES:
+        print(f"non .pdf /.pptx /.docx /.md file type is not allowed the file_type passed is {file_type}")
         raise RuntimeError("Aborting because filetype is not allowed")
 
 
