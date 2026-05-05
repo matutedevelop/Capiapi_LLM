@@ -89,7 +89,6 @@ def login(req: LoginRequest):
 
 # ── DEBEZIUM CDC ENDPOINT ─────────────────────────────────────────────────────
 
-
 def process_document_event(payload: dict):
     """
     Background task that processes CDC events from Debezium.
@@ -209,7 +208,6 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 def chat(req: ChatRequest):
     def generate():
-        for chunk in ask(req.course_code, req.question):
+        for chunk in ask(req.course_code, req.course_name, req.question):
             yield chunk
-    
     return StreamingResponse(generate(), media_type="text/plain")

@@ -281,7 +281,7 @@ export default function CapiAPI() {
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const selectedCourseName = courses.find(c => c.id === selectedCourse)?.name;
+  const selectedCourseName = courses.find(c => String(c.id) === String(selectedCourse))?.name;
   const selectedCourseCode = courses.find(c => String(c.id) === String(selectedCourse))?.code;
 
   useEffect(() => {
@@ -314,6 +314,7 @@ export default function CapiAPI() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           course_code: selectedCourseCode,
+          course_name: selectedCourseName,
           question: trimmed
         })
       });
