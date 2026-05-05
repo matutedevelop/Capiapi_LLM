@@ -161,6 +161,7 @@ def process_document_event(payload: dict):
         print(f"Error processing CDC event: {e}")
 
 
+# TODO: THROW THIS SHIT AWAY away away way away... cause im drifting away away awayyyyy....
 @app.post("/debezium/events")
 async def debezium_events(request: Request, background_tasks: BackgroundTasks):
     """
