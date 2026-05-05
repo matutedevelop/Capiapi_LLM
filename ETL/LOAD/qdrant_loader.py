@@ -117,7 +117,7 @@ def on_new_document(course_code: str, filename: str) -> None:
         filename: file name, e.g., 'syllabus.md'
     """
     container = os.getenv("AZURE_CONTAINER_PROCESSED")
-    blob_path = f"{course_code}/{filename}"
+    blob_path = f"{course_code}/.md/{filename}"
 
     print(f"[EVENT] New document detected: {blob_path}")
 
@@ -137,6 +137,6 @@ def on_new_document(course_code: str, filename: str) -> None:
 if __name__ == "__main__":
     
     on_new_document(
-        course_code="P2025_MAF1121H2",
-        filename="pip + nix template.md"
+        course_code="test_moi",
+        filename="type 2 error.md"
     )

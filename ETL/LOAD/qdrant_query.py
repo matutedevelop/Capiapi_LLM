@@ -49,7 +49,7 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     ]
 
 
-def ask(course_code: str, question: str) -> str:
+def ask(course_code: str, question: str):
     """
     You ask a question about a course, and the LLM returns the answer.
     """
@@ -74,7 +74,7 @@ PREGUNTA:
 RESPUESTA:"""
 
     stream = ollama_client.chat(
-        model="gemma4:26b",
+        model="gemma4:latest",
         messages=[{"role": "user", "content": prompt}],
         stream=True
     )
@@ -86,7 +86,7 @@ RESPUESTA:"""
 # if __name__ == "__main__":
 #     respuesta = ask(
 #         course_code="P2025_MAF1121H2",
-#         question="Que onda tengo la siguiente duda, que son los z-scores?"
+#         question=""
 #     )
 #     print(respuesta)
 
