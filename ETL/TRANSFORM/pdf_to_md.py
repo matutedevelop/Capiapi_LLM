@@ -1,27 +1,18 @@
 from azure.storage.blob import BlobServiceClient
 from docling.document_converter import DocumentConverter
 from ETL.LOAD.upload import upload_file
-import argparse
 import tempfile
-import time
 import dotenv
 import os
 import io
 
-dotenv.load_dotenv()
-
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
-raw_container_name       = os.getenv("AZURE_CONTAINER_RAW")
-processed_container_name = os.getenv("AZURE_CONTAINER_PROCESSED")
-
-ac = BlobServiceClient(
-    account_url=f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net",
-    credential=os.getenv("AZURE_STORAGE_ACCOUNT_KEY"),
-)
 
 
 # ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
-def download_blob_to_stream(ac, blob_name, container_name=raw_container_name):
+def download_blob_to_stream(ac, blob_name, container_name=None):
+
+    container_name = container_name or os.getenv("AZURE_CONTAINER_RAW")
+
     try:
         blob_client = ac.get_blob_client(container=container_name, blob=blob_name)
         byte_stream = io.BytesIO()
@@ -89,6 +80,24 @@ def process_pdf_blob(blob_name: str) -> bool:
         3. Imprime confidence score
         4. Sube el .md al contenedor PROCESSED
     """
+
+    # ==========
+
+
+    dotenv.load_dotenv()
+
+    # ─── CONFIG ───────────────────────────────────────────────────────────────────
+    raw_container_name       = os.getenv("AZURE_CONTAINER_RAW")
+    processed_container_name = os.getenv("AZURE_CONTAINER_PROCESSED")
+
+    ac = BlobServiceClient(
+        account_url=f"https://{os.getenv('AZURE_STORAGE_ACCOUNT_NAME')}.blob.core.windows.net",
+        credential=os.getenv("AZURE_STORAGE_ACCOUNT_KEY"),
+    )
+
+
+    # ++++++++++++++
+
     print(f"\n{'='*50}")
     print(f"Procesando: {blob_name}")
 
@@ -122,25 +131,26 @@ def process_pdf_blob(blob_name: str) -> bool:
 
 
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
-def main():
-    parser = argparse.ArgumentParser(
-        description="Convierte PDFs del datalake RAW a Markdown en PROCESSED."
-    )
-    parser.add_argument(
-        "--blob", type=str, required=True,
-        help="Nombre del blob (ej: P2025_MAF1121H2/.pdf/repaso1v1.pdf)",
-    )
-    args = parser.parse_args()
-
-    start   = time.time()
-    success = process_pdf_blob(args.blob)
-    elapsed = time.time() - start
-
-    print(f"\n{'='*50}")
-    print(f"Estado  : {'OK' if success else 'FAILED'}")
-    print(f"Tiempo  : {elapsed:.2f}s")
-    print(f"{'='*50}")
+# def main():
+#     parser = argparse.ArgumentParser(
+#         description="Convierte PDFs del datalake RAW a Markdown en PROCESSED."
+#     )
+#     parser.add_argument(
+#         "--blob", type=str, required=True,
+#         help="Nombre del blob (ej: P2025_MAF1121H2/.pdf/repaso1v1.pdf)",
+#     )
+#     args = parser.parse_args()
+#
+#     start   = time.time()
+#     success = process_pdf_blob(args.blob)
+#     elapsed = time.time() - start
+#
+#     print(f"\n{'='*50}")
+#     print(f"Estado  : {'OK' if success else 'FAILED'}")
+#     print(f"Tiempo  : {elapsed:.2f}s")
+#     print(f"{'='*50}")
 
 
 if __name__ == "__main__":
-    main()
+    pass
+   # main()
