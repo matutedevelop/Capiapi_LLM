@@ -186,7 +186,8 @@ async def trigger_sync(user_id: int, background_tasks: BackgroundTasks):
     Triggers a full sync for a given user.
     Called by the frontend Recargar button.
     """
-    background_tasks.add_task(sync_user, user_id)
+    print("BEGINING MAIN PIPELINE")
+    background_tasks.add_task(user_pipeline, user_id)
     return {"status": "sync started", "user_id": user_id}
 
 

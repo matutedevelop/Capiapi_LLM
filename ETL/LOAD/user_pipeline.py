@@ -15,6 +15,9 @@ def user_pipeline(user_id: int):
 
     # TODO: mejorar esta mierda que escribi yo
 
+    print("initializing state of user_pipeline",flush=True)
+    print(f"USER_ID {user_id}",flush=True)
+
     # ==State
     dotenv.load_dotenv()
 
@@ -22,7 +25,7 @@ def user_pipeline(user_id: int):
 
     user_data_response = nc.select("users", params={"id": f"eq.{user_id}"})
     if not user_data_response:
-        print("Couldnt get user data to start the user_pipeline")
+        print("Couldnt get user data to start the user_pipeline",flush=True)
         return
     user_canvas_api = user_data_response[0]["canvas_api_token"]
     user_canvas_url = "https://canvas.iteso.mx"  # TODO: make this general
@@ -40,11 +43,16 @@ def user_pipeline(user_id: int):
 
     # ====Hicimos lo mejor que pudimos profe
 
+    print("BEG SYNC USER TO NEON",flush=True)
+
+
     try:
         sync_user(user_id=user_id, nc=nc, cc=cc)
     except Exception:
-        print("The pipeline ended while running sync_user")
+        print("The pipeline ended while running sync_user",flush=True)
+        raise Exception 
 
+    print("END SYNC USER TO NEON",flush=True)
 
 
     user_courses = nc.select("user_courses", params={"user_id": f"eq.{user_id}"})
@@ -57,7 +65,9 @@ def user_pipeline(user_id: int):
     try:
         asyncio.run(upload_user_files(user_id=user_id, nc=nc, ac=ac, canvas_api=user_canvas_api))
     except Exception:
-        print("The pipeline ended while runing upload_file")
+        print("The pipeline ended while runing upload_file",flush=True)
+        raise Exception 
+
     try:
         blob_names = [
             blob.name
@@ -68,7 +78,8 @@ def user_pipeline(user_id: int):
         for blob_name in blob_names:
             process_pdf_blob(blob_name)
     except Exception:
-        print("The pipeline ended while running docling pipeline")
+        print("The pipeline ended while running docling pipeline",flush=True)
+        raise Exception 
     try:
         for course in courses:
             course_code = course["code"]
@@ -77,4 +88,5 @@ def user_pipeline(user_id: int):
             for doc in documents:
                 on_new_document(course_code=course_code, file_name=doc["filename"])
     except Exception:
-        print("The pipeline ended while running qdrant pipeline")
+        print("The pipeline ended while running qdrant pipeline",flush=True)
+        raise Exception 
