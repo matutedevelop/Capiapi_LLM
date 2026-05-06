@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from ETL.LOAD.user_pipeline import user_pipeline
 from neon_auth.client import NeonClient
 from ETL.LOAD.upload import upload_file
 from ETL.TRANSFORM.pdf_to_md import process_pdf_blob
@@ -55,7 +56,10 @@ def login(req: LoginRequest):
         if not req.canvas_token or not req.canvas_token.strip():
             raise HTTPException(
                 status_code=428,
-                detail={"needs_canvas_token": True, "message": "Canvas token required for new users"}
+                detail={
+                    "needs_canvas_token": True,
+                    "message": "Canvas token required for new users",
+                },
             )
 
         # Create new user
@@ -114,7 +118,7 @@ def process_document_event(payload: dict):
             user_id = after.get("id") if after else None
             if user_id:
                 print(f"  New user detected (id={user_id}), triggering sync...")
-                sync_user(user_id)
+                user_pipeline(user_id=user_id)
 
         # Document inserted or updated
         if table == "documents" and op in ("c", "u"):
@@ -126,7 +130,7 @@ def process_document_event(payload: dict):
             # TODO: trigger document processing pipeline in future KAN
 
             # if filename and course_code and not loaded:
-                # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
+            # on_new_document(course_code, filename) this is after parsing - load a file to the vdb
 
             # =<><><><><><><><><<><><><><><><><><><
 
@@ -152,7 +156,6 @@ def process_document_event(payload: dict):
 
             process_pdf_blob(blob_name)
 
-
             ac.update("documents", data={"loaded": True}, params={"id": f"eq.{doc_id}"})
 
             # =<><><><><><><><><<><><><><><><><><><
@@ -173,7 +176,9 @@ async def debezium_events(request: Request, background_tasks: BackgroundTasks):
     background_tasks.add_task(process_document_event, payload)
     return {"status": "received"}
 
+
 # ── SYNC + COURSES ENDPOINTS ──────────────────────────────────────────────────
+
 
 @app.post("/sync/{user_id}")
 async def trigger_sync(user_id: int, background_tasks: BackgroundTasks):
@@ -192,23 +197,27 @@ def get_user_courses(user_id: int):
     Uses PostgREST join to fetch course details in a single query.
     """
     client = NeonClient()
-    result = client.select("user_courses", params={
-        "user_id": f"eq.{user_id}",
-        "select": "course_id,courses(id,code,name)"
-    })
+    result = client.select(
+        "user_courses",
+        params={
+            "user_id": f"eq.{user_id}",
+            "select": "course_id,courses(id,code,name)",
+        },
+    )
     courses = [item["courses"] for item in result if item.get("courses")]
     return {"courses": courses}
 
 
 # ── QDRANT QUERY ──────────────────────────────────────────────────
 
+
 class ChatRequest(BaseModel):
     course_code: str
     question: str
 
+
 @app.post("/chat")
 def chat(req: ChatRequest):
     return StreamingResponse(
-        ask(req.course_code, req.question),
-        media_type="text/plain"
+        ask(req.course_code, req.question), media_type="text/plain"
     )
