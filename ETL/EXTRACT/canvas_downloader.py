@@ -222,9 +222,9 @@ class CanvasClient:
                 file_type = unidecode(row[1])[file_ext_slice]
                 download_url = row[0]
 
-                file_name_column.append(file_name)
-                file_type_column.append(file_type)
-                download_url_column.append(download_url)
+                file_name_column.append(file_name.strip())
+                file_type_column.append(file_type.strip())
+                download_url_column.append(download_url.strip())
 
             df = pd.DataFrame(
                 {

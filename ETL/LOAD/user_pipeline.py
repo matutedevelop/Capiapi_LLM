@@ -75,14 +75,15 @@ def user_pipeline(user_id: int):
     print("BEGINING OF Docling")
     print("===========")
     try:
+        pass
         # TODO do this parallel
-        blob_names = [
-            blob.name
-            for blob in container_client.list_blobs()
-            if blob.name.split("/")[0] in course_codes
-        ]
-
-        process_pdf_blobs_parallel(blob_names,canvas_token=user_canvas_api)
+        # blob_names = [
+        #     blob.name
+        #     for blob in container_client.list_blobs()
+        #     if blob.name.split("/")[0] in course_codes
+        # ]
+        #
+        # process_pdf_blobs_parallel(blob_names,canvas_token=user_canvas_api)
 
         # for blob_name in blob_names:
         #     process_pdf_blob(blob_name=blob_name, canvas_token=user_canvas_api)
@@ -102,9 +103,11 @@ def user_pipeline(user_id: int):
         for course in courses:
             course_code = course["code"]
             course_id = course["id"]
-            documents = nc.select("documents", params={"course_id": f"eq.{course_id}"})
+            documents = nc.select("documents", params={"course_id": f"eq.{course_id
+            }"})
             for doc in documents:
-                on_new_document(course_code=course_code, file_name=doc["filename"])
+                print(f"{doc['filename']=}")
+                on_new_document(course_code=course_code, filename=doc["filename"])
     except Exception as e:
         print("The pipeline ended while running qdrant pipeline", flush=True)
         raise e
@@ -113,7 +116,5 @@ def user_pipeline(user_id: int):
     print("BEGINING OF QDRANT")
     print("===========")
 
-
-
     print("<><><><><><><><><><><><><><")
-    print(f"END OF MAIN PIPELINE OF USER {user_id}") 
+    print(f"END OF MAIN PIPELINE OF USER {user_id}")
