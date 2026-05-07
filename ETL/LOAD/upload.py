@@ -13,6 +13,7 @@ def download_file(file_name: str, file_url: str, canvas_token: str) -> bytes:
     headers = {"Authorization": f"Bearer {canvas_token}"}
 
     r = httpx.get(file_url, headers=headers, follow_redirects=True)
+    print(f"[Download status code] {r.status_code}")
     r.raise_for_status()
     return r.content
 
@@ -21,16 +22,32 @@ def upload_file(
     ac: BlobServiceClient,
     container_name: str,
     file_name: str,
-    file_url: str,
     course_code: str,
     file_type: str,
     canvas_api: str,
+    file_url: str | None = None,
+    content: str | None = None,
 ) -> None:
+
+    blob = ac.get_blob_client(container_name, f"{course_code}/{file_type}/{file_name}")
+
+
+    if content is not None and file_url is None:
+        print("THIS CONSTRAINT HITUP")
+        print("=1=1=1=1=1=1==1=1=1")
+        print("=1=1=1=1=1=1==1=1=1")
+        print("=1=1=1=1=1=1==1=1=1")
+        print("=1=1=1=1=1=1==1=1=1")
+        print("=1=1=1=1=1=1==1=1=1")
+        blob.upload_blob(content, overwrite=True)
+        return
 
     content_to_upload = download_file(
         file_name=file_name, file_url=file_url, canvas_token=canvas_api
     )
-    blob = ac.get_blob_client(container_name, f"{course_code}/{file_type}/{file_name}")
+
+
+
     blob.upload_blob(content_to_upload, overwrite=True)
 
 
@@ -52,25 +69,37 @@ async def upload_user_files(
     course_map = {c["id"]: c["code"] for c in courses}
 
     # TODO: Extend to more than pdfs
-    ALLOWED_TYPES = ["pdf", "docx", "pptx", "md"]  
+    allowed_types = ['".pdf "', '".docx "', '".pptx "', '".md "']
 
+    # =======================
+    # =======================
     documents = nc.select(
         "documents",
         params={
             "course_id": f"in.({','.join(map(str, course_ids))})",
-            "file_type": f"in.({','.join(ALLOWED_TYPES)})",
+            "file_type": f"in.({','.join(allowed_types)})",
         },
     )
+
+    print(f"{documents=}")
 
     if not documents:
         print(f"[upload_user_files] No documents found for user {user_id}")
         return
 
+    # =======================
+    # =======================
+
     # upload asyncronus
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(20)
+
+    print("VAMO AQUI")
 
     async def upload_one(doc):
+
         async with semaphore:
+            print(f"[upload_one] processing {doc['filename']}")
+
             course_code = course_map.get(doc["course_id"])
             if not course_code:
                 print(
@@ -78,17 +107,38 @@ async def upload_user_files(
                 )
                 return
 
-            await asyncio.to_thread(
-                upload_file,
-                ac=ac,
-                container_name=os.getenv("AZURE_CONTAINER_RAW"),
-                file_name=doc["filename"],
-                file_url=doc["file_url"],
-                course_code=course_code,
-                file_type=doc["file_type"],
-                canvas_api=canvas_api,
-            )
+            print(f"[upload_one] uploading {doc['filename']} to {course_code}")
 
+            try:
+                await asyncio.to_thread(
+                    upload_file,
+                    ac=ac,
+                    container_name=os.getenv("AZURE_CONTAINER_RAW"),
+                    file_name=doc["filename"],
+                    file_url=doc["file_url"].strip(),
+                    course_code=course_code,
+                    file_type=doc["file_type"],
+                    canvas_api=canvas_api,
+                )
+            except Exception as e:
+                print("DOCDOCDOCDOCDOCDOC")
+                print(doc)
+                print(f"[upload_one] FAILED {doc['filename']}: {type(e).__name__}: {e}")
+                return
+            print(f"[upload_one] done {doc['filename']}")
+
+    #         await asyncio.to_thread(
+    #             upload_file,
+    #             ac=ac,
+    #             container_name=os.getenv("AZURE_CONTAINER_RAW"),
+    #             file_name=doc["filename"],
+    #             file_url=doc["file_url"],
+    #             course_code=course_code,
+    #             file_type=doc["file_type"],
+    #             canvas_api=canvas_api,
+    #         )
+    #         print(f"[upload_one] done {doc['filename']}")
+    #
     await asyncio.gather(
         *[upload_one(doc) for doc in documents], return_exceptions=True
     )
@@ -162,4 +212,4 @@ async def upload_user_files(
 
 if __name__ == "__main__":
     pass
-    #main()
+    # main()

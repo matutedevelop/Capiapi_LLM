@@ -30,9 +30,7 @@ class CanvasClient:
 
         print("88====================================")
         print("88====================================")
-        print(self.__canvas_url,flush=True)
         print("<><><><><>",flush=True)
-        print("hola"+self.__canvas_api_token,flush=True)
         print("88====================================")
         print("88====================================")
 
