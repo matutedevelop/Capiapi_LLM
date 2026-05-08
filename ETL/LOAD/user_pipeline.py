@@ -103,8 +103,8 @@ def user_pipeline(user_id: int):
         for course in courses:
             course_code = course["code"]
             course_id = course["id"]
-            documents = nc.select("documents", params={"course_id": f"eq.{course_id
-            }"})
+            documents = nc.select("documents", params={"course_id": f"eq.{course_id}"})
+            
             for doc in documents:
                 print(f"{doc['filename']=}")
                 on_new_document(course_code=course_code, filename=doc["filename"])
