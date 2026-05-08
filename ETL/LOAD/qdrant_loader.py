@@ -2,6 +2,7 @@ import os
 import hashlib
 import uuid
 import sys
+import re
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
@@ -116,8 +117,11 @@ def on_new_document(course_code: str, filename: str) -> None:
         course_code: course code, e.g., 'O2024_DEL34E6'
         filename: file name, e.g., 'syllabus.md'
     """
+
+    filename_md = re.sub(r'\.[^.]+$', '.md', filename)
+
     container = os.getenv("AZURE_CONTAINER_PROCESSED")
-    blob_path = f"{course_code}/{filename}"
+    blob_path = f"{course_code}/.md/{filename_md}"
 
     print(f"[EVENT] New document detected: {blob_path}")
 
@@ -131,7 +135,7 @@ def on_new_document(course_code: str, filename: str) -> None:
         return
 
     # load to Qdrant
-    load_file_to_qdrant(course_code, filename, content)
+    load_file_to_qdrant(course_code, filename_md, content)
 
 
 if __name__ == "__main__":
