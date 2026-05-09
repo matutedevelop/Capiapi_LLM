@@ -1,14 +1,12 @@
 import os
 import hashlib
 import uuid
-import sys
 import re
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
-import time
 
-from config import client, VECTOR_SIZE, get_collection_name, get_embedding
+from ETL.LOAD.config import client, VECTOR_SIZE, get_collection_name, get_embedding
 
 load_dotenv()
 

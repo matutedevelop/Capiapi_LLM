@@ -3,7 +3,7 @@ import sys
 from dotenv import load_dotenv
 import ollama
 
-from config import client, get_collection_name, get_embedding
+from ETL.LOAD.config import client, get_collection_name, get_embedding
 
 load_dotenv()
 

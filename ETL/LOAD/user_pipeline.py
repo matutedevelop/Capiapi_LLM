@@ -100,11 +100,18 @@ def user_pipeline(user_id: int):
     print("BEGINING OF QDRANT")
     print("===========")
     try:
+        allowed_types = ['".pdf "', '".docx "', '".pptx "', '".md "']
         for course in courses:
             course_code = course["code"]
             course_id = course["id"]
-            documents = nc.select("documents", params={"course_id": f"eq.{course_id}"})
-            
+            documents = nc.select(
+                "documents",
+                params={
+                    "course_id": f"eq.{course_id}",
+                    "file_type": f"in.({','.join(allowed_types)})",
+                },
+            )
+
             for doc in documents:
                 print(f"{doc['filename']=}")
                 on_new_document(course_code=course_code, filename=doc["filename"])
