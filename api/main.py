@@ -10,7 +10,6 @@ from ETL.TRANSFORM.pdf_to_md import process_pdf_blob
 
 import os
 import dotenv
-from ETL.LOAD.sync import sync_user
 from ETL.LOAD.qdrant_query import ask
 
 app = FastAPI()

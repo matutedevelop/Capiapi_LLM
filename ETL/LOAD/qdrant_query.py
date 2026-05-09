@@ -22,7 +22,7 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     collection_name = get_collection_name(course_code)
 
     # Embed the question 
-    query_embedding = get_embedding(question)
+    query_embedding = get_embedding(question,is_query=True)
 
     # search Qdrant
     results = client.query_points(
