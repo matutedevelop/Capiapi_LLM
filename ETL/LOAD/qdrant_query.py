@@ -83,7 +83,7 @@ def ask(course_code: str, course_name: str, question: str):
 # if __name__ == "__main__":
 #     respuesta = ask(
 #         course_code="P2025_MAF1121H2",
-#         question="Que onda tengo la siguiente duda, que son los z-scores?"
+#         question=""
 #     )
 #     print(respuesta)
 
@@ -91,6 +91,7 @@ def ask(course_code: str, course_name: str, question: str):
 if __name__ == "__main__":
     for chunk in ask(
         course_code="P2025_MAF1121H2",
-        question="Que onda tengo la siguiente duda, que son los z-scores?"
+        course_name="Calculo Integral",
+        question="Que son los z-scores?"
     ):
         print(chunk, end="", flush=True)

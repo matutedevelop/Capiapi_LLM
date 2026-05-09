@@ -92,7 +92,6 @@ def login(req: LoginRequest):
 
 # ── DEBEZIUM CDC ENDPOINT ─────────────────────────────────────────────────────
 
-
 def process_document_event(payload: dict):
     """
     Background task that processes CDC events from Debezium.
