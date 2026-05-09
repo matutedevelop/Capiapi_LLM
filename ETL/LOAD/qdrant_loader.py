@@ -8,7 +8,6 @@ from azure.storage.blob import BlobServiceClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
 import time
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../qdrant'))
 from config import client, VECTOR_SIZE, get_collection_name, get_embedding
 
 load_dotenv()

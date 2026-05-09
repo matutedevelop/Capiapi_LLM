@@ -1,11 +1,9 @@
 import os
 import sys
 from dotenv import load_dotenv
-from google.genai import types
 import ollama
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../qdrant'))
-from config import client, get_collection_name, get_embedding, genai_client
+from config import client, get_collection_name, get_embedding
 
 load_dotenv()
 
@@ -24,11 +22,7 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     collection_name = get_collection_name(course_code)
 
     # Embed the question 
-    query_embedding = genai_client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=question,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
-    ).embeddings[0].values
+    query_embedding = get_embedding(question)
 
     # search Qdrant
     results = client.query_points(
@@ -49,33 +43,36 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     ]
 
 
-def ask(course_code: str, question: str) -> str:
-    """
-    You ask a question about a course, and the LLM returns the answer.
-    """
-    # Retrieve relevant context
+def ask(course_code: str, course_name: str, question: str):
     chunks = query_course(course_code, question)
 
     if not chunks:
-        yield "I couldn't find any relevant information for your question."
+        yield "No encontré información relevante para tu pregunta en el material del curso."
         return
 
     context = "\n\n".join([f"[{c['filename']}]\n{c['text']}" for c in chunks])
 
-    prompt = f"""Eres un asistente académico. Usa el siguiente contexto para responder la pregunta del estudiante.
-Si la respuesta no está en el contexto, dilo claramente.
+    system_prompt = (
+        f"Eres CapiAPI, un asistente académico del curso '{course_name}' (código: {course_code}) del ITESO. "
+        f"Tu único trabajo es ayudar a estudiantes universitarios a entender el material de este curso. "
+        f"\n\nREGLAS:"
+        f"\n- Responde SIEMPRE en español, de forma clara y accesible para estudiantes de universidad o preparatoria."
+        f"\n- Usa ÚNICAMENTE la información del contexto proporcionado. Si algo no está en el contexto, dilo claramente: 'Eso no está en el material del curso'."
+        f"\n- NUNCA inventes información, fórmulas, definiciones o ejemplos que no estén en el contexto."
+        f"\n- Si el contexto es insuficiente para responder, dilo honestamente y sugiere al estudiante revisar sus apuntes o preguntar al profesor."
+        f"\n- Solo menciona el nombre del curso si el estudiante te lo pregunta explícitamente."
+        f"\n- Explica los conceptos de forma sencilla, usa ejemplos cuando ayude a entender."
+        f"\n- Si hay fórmulas matemáticas, explícalas paso a paso."
+    )
 
-CONTEXTO:
-{context}
-
-PREGUNTA:
-{question}
-
-RESPUESTA:"""
+    user_prompt = f"CONTEXTO:\n{context}\n\nPREGUNTA:\n{question}"
 
     stream = ollama_client.chat(
-        model="gemma4:26b",
-        messages=[{"role": "user", "content": prompt}],
+        model="gemma4:latest",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
         stream=True
     )
 
