@@ -1,11 +1,9 @@
 import os
 import sys
 from dotenv import load_dotenv
-from google.genai import types
 import ollama
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../qdrant'))
-from config import client, get_collection_name, get_embedding, genai_client
+from ETL.LOAD.config import client, get_collection_name, get_embedding
 
 load_dotenv()
 
@@ -24,11 +22,7 @@ def query_course(course_code: str, question: str, top_k: int = 5) -> list[dict]:
     collection_name = get_collection_name(course_code)
 
     # Embed the question 
-    query_embedding = genai_client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=question,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
-    ).embeddings[0].values
+    query_embedding = get_embedding(question,is_query=True)
 
     # search Qdrant
     results = client.query_points(

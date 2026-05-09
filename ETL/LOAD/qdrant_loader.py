@@ -1,13 +1,12 @@
 import os
 import hashlib
 import uuid
-import sys
+import re
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
 from qdrant_client.models import PointStruct, VectorParams, Distance
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../qdrant'))
-from config import client, VECTOR_SIZE, get_collection_name, get_embedding
+from ETL.LOAD.config import client, VECTOR_SIZE, get_collection_name, get_embedding
 
 load_dotenv()
 
@@ -116,8 +115,11 @@ def on_new_document(course_code: str, filename: str) -> None:
         course_code: course code, e.g., 'O2024_DEL34E6'
         filename: file name, e.g., 'syllabus.md'
     """
+
+    filename_md = re.sub(r'\.[^.]+$', '.md', filename)
+
     container = os.getenv("AZURE_CONTAINER_PROCESSED")
-    blob_path = f"{course_code}/.md/{filename}"
+    blob_path = f"{course_code}/.md/{filename_md}"
 
     print(f"[EVENT] New document detected: {blob_path}")
 
@@ -131,12 +133,12 @@ def on_new_document(course_code: str, filename: str) -> None:
         return
 
     # load to Qdrant
-    load_file_to_qdrant(course_code, filename, content)
+    load_file_to_qdrant(course_code, filename_md, content)
 
 
 if __name__ == "__main__":
     
     on_new_document(
-        course_code="test_moi",
-        filename="type 2 error.md"
+        course_code="P2025_MAF1121H2",
+        filename="pip + nix template.md"
     )

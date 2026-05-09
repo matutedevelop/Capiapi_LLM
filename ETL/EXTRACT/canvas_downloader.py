@@ -5,6 +5,7 @@ import os
 import shutil
 from unidecode import unidecode
 import platform
+import textwrap
 
 
 class CanvasClient:
@@ -20,14 +21,29 @@ class CanvasClient:
         # Directions
         base_path = Path(__file__).parent / "extract-tools"
         file_directory = base_path / "canvas-downloader.toml"
-        binary_name = "canvas-downloader.exe" if platform.system() == "Windows" else "canvas-downloader"
+        binary_name = (
+            "canvas-downloader.exe"
+            if platform.system() == "Windows"
+            else "canvas-downloader"
+        )
         binary_path = base_path / binary_name
+
+        print("88====================================")
+        print("88====================================")
+        print("<><><><><>",flush=True)
+        print("88====================================")
+        print("88====================================")
 
         # .toml file content
         file_content = (
             f'canvas_url = "{self.__canvas_url}"\n'
-            f'canvas_token = "{self.__canvas_api_token}"'
+            f'canvas_token = "{self.__canvas_api_token}"\n'
         )
+
+        print("88====================================")
+        print("88====================================")
+
+        print(file_content)
 
         # validate that the binary is where is suposed to and is executable
         if not binary_path.exists():
@@ -58,12 +74,10 @@ class CanvasClient:
         """This function is responsable for making use of the canvas-downloader binary
         it calls config_file_creator and handles error code, THIS FUNCTION MIGHT FAIL"""
 
-
-
         temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
         if flags is None:
-            flags = ["--no-raw","-d", temp_stage_direction ]
+            flags = ["--no-raw", "-d", temp_stage_direction]
 
         try:
             self._config_file_creator()
@@ -75,7 +89,11 @@ class CanvasClient:
         binary_directory = Path(__file__).parent / "extract-tools"
 
         # call without subcommand argument
-        binary_name = "canvas-downloader.exe" if platform.system() == "Windows" else "canvas-downloader"
+        binary_name = (
+            "canvas-downloader.exe"
+            if platform.system() == "Windows"
+            else "canvas-downloader"
+        )
 
         if input is None:
             result = subprocess.run(
@@ -93,7 +111,6 @@ class CanvasClient:
         if result.returncode == -6:
             self._clean_binary_directory()
             raise ProblematicCourseException
-
 
         elif result.returncode != 0:
             raise RuntimeError(
@@ -137,7 +154,9 @@ class CanvasClient:
 
         return df
 
-    def get_course_file_name(self, course_codes: list[str]) -> (pd.DataFrame,list[str]):
+    def get_course_file_name(
+        self, course_codes: list[str]
+    ) -> (pd.DataFrame, list[str]):
         """This function takes a list of valid course_codes runs the binary over this courses to get
         the file names, is important to assure that in all courses passed as argument, the student whose
         is the owner of the api token of this instance, is enrolled in this courses, otherwise the binary
@@ -149,7 +168,6 @@ class CanvasClient:
 
         for course_code in course_codes:
             flags = ["-c", course_code, "--dry-run", "--no-raw"]
-
 
             try:
                 result = self._binary_caller(flags=flags)
@@ -197,16 +215,16 @@ class CanvasClient:
                 end_file_name_idx = row[1].rfind("(")
                 begining_file_ext_idx = row[1][:end_file_name_idx].rfind(".")
 
-                file_name_slice = slice(begining_file_name_idx,end_file_name_idx)
-                file_ext_slice = slice(begining_file_ext_idx,end_file_name_idx)
+                file_name_slice = slice(begining_file_name_idx, end_file_name_idx)
+                file_ext_slice = slice(begining_file_ext_idx, end_file_name_idx)
 
                 file_name = unidecode(row[1])[file_name_slice]
                 file_type = unidecode(row[1])[file_ext_slice]
                 download_url = row[0]
 
-                file_name_column.append(file_name)
-                file_type_column.append(file_type)
-                download_url_column.append(download_url)
+                file_name_column.append(file_name.strip())
+                file_type_column.append(file_type.strip())
+                download_url_column.append(download_url.strip())
 
             df = pd.DataFrame(
                 {
@@ -220,7 +238,7 @@ class CanvasClient:
             file_name_df_list.append(df)
 
         file_name_df = pd.concat(file_name_df_list)
-        return (file_name_df,problematic_course_codes)
+        return (file_name_df, problematic_course_codes)
 
     # === === === === === === === === === === === === === === === === ===
     # download flow
@@ -248,7 +266,6 @@ class CanvasClient:
         temp_stage_direction = Path(__file__).parent.parent / "LOAD" / "temp_stage"
 
         if not temp_stage_direction.exists():
-
             print("the temporary stage direction does not exists")
             temp_stage_direction.mkdir(parents=True)
             print(f"temp stage directory was created at {temp_stage_direction}")
@@ -256,7 +273,6 @@ class CanvasClient:
             return
 
         for x in temp_stage_direction.iterdir():
-
             if x.is_dir():
                 shutil.rmtree(x)
             else:
@@ -273,10 +289,11 @@ class CanvasClient:
                 print(f"Removed directory: {x.name}")
 
 
-
 class ProblematicCourseException(Exception):
     """This exception is Raised when the course is problematic to query e.g. has not enought content to query, this a thing of the canvas binary and is not completlly desired"""
+
     pass
+
 
 # === === === === === === === === === === === === === === === === ===
 # === === === === === === === === === === === === === === === === ===
