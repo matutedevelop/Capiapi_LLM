@@ -19,14 +19,14 @@ genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 def get_collection_name(course_code: str) -> str:
     return f"capiapi_{course_code}"
 
-def get_embedding(text: str) -> list[float]:
-    result = genai_client.models.embed_content(
-        model=EMBED_MODEL,
-        contents=text,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
-    )
-    return result.embeddings[0].values
+# def get_embedding(text: str) -> list[float]:
+#     result = genai_client.models.embed_content(
+#         model=EMBED_MODEL,
+#         contents=text,
+#         config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+#     )
+#     return result.embeddings[0].values
 
 def get_embedding(text:str):
-    vector = model.encode_document(text).values
+    vector = model.encode_document(text)
     return vector
