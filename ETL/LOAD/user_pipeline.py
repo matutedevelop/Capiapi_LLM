@@ -1,10 +1,12 @@
 from ETL.EXTRACT.canvas_downloader import CanvasClient
 from ETL.LOAD.qdrant_loader import on_new_document
+from ETL.LOAD.sync import sync_user
 from ETL.TRANSFORM.pdf_to_md import process_pdf_blobs_parallel
 from azure.storage.blob import BlobServiceClient
 import os
 import dotenv
-
+import asyncio
+import time
 from neon_auth.client import NeonClient
 
 
@@ -39,14 +41,16 @@ def user_pipeline(user_id: int):
     # ====Hicimos lo mejor que pudimos profe
 
     print("BEG SYNC USER TO NEON", flush=True)
-
+    start = time.perf_counter
     try:
-        # sync_user(user_id=user_id, nc=nc, cc=cc)
-        pass
+        sync_user(user_id=user_id, nc=nc, cc=cc)
+
     except Exception as e:
         print("The pipeline ended while running sync_user", flush=True)
         raise e
 
+    end = time.perf_counter()
+    print(f"NEON TOOK {end - start}s")
     print("END SYNC USER TO NEON", flush=True)
 
     user_courses = nc.select("user_courses", params={"user_id": f"eq.{user_id}"})
@@ -61,8 +65,9 @@ def user_pipeline(user_id: int):
     print("BEGINING OF RAW DATALAKE")
     print("===========")
     try:
-        print("-----------========")
-        # asyncio.run(upload_user_files(user_id=user_id, nc=nc, ac=ac, canvas_api=user_canvas_api))
+        asyncio.run(
+            upload_user_files(user_id=user_id, nc=nc, ac=ac, canvas_api=user_canvas_api)
+        )
     except Exception as e:
         print("The pipeline ended while runing upload_file", flush=True)
         raise e
@@ -77,16 +82,13 @@ def user_pipeline(user_id: int):
     try:
         pass
         # TODO do this parallel
-        # blob_names = [
-        #     blob.name
-        #     for blob in container_client.list_blobs()
-        #     if blob.name.split("/")[0] in course_codes
-        # ]
-        #
-        # process_pdf_blobs_parallel(blob_names,canvas_token=user_canvas_api)
+        blob_names = [
+            blob.name
+            for blob in container_client.list_blobs()
+            if blob.name.split("/")[0] in course_codes
+        ]
 
-        # for blob_name in blob_names:
-        #     process_pdf_blob(blob_name=blob_name, canvas_token=user_canvas_api)
+        process_pdf_blobs_parallel(blob_names, canvas_token=user_canvas_api)
 
     except Exception as e:
         print("The pipeline ended while running docling pipeline", flush=True)
