@@ -108,7 +108,7 @@ def load_file_to_qdrant(course_code: str, filename: str, content: str) -> None:
 
 def on_new_document(course_code: str, filename: str) -> None:
     """
-    Triggered when Debezium detects a new document in Neon.
+    Triggered by user or cron job
     Downloads the .md file from canvas-procesado and uploads it to Qdrant.
 
     Parameters:

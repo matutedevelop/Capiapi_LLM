@@ -1,11 +1,14 @@
 from azure.storage.blob import BlobServiceClient
 from docling.document_converter import DocumentConverter
+from docling.datamodel.pipeline_options import PipelineOptions, AcceleratorOptions
+from docling.datamodel.base_models import AcceleratorDevice
 from ETL.LOAD.upload import upload_file
 import tempfile
 import dotenv
 import os
 import io
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 
 # ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
@@ -52,7 +55,14 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
         with open(tmp_path, "wb") as f:
             f.write(byte_stream.read())
 
-        converter = DocumentConverter()
+        pipeline_options = PipelineOptions(
+            accelerator_options=AcceleratorOptions(
+                num_threads=4,
+                device=AcceleratorDevice.CUDA
+            )
+        )
+
+        converter = DocumentConverter(pipeline_options=pipeline_options)
         result = converter.convert(tmp_path)
         markdown = result.document.export_to_markdown()
         confidence = get_confidence_score(result)
@@ -136,7 +146,7 @@ def process_pdf_blob(blob_name: str, canvas_token: str) -> bool:
 def process_pdf_blobs_parallel(
     blob_names: list[str],
     canvas_token: str,
-    max_workers: int = 4,
+    max_workers: int = 1,
 ) -> dict:
     """
     parallel process of docling blobs and upload

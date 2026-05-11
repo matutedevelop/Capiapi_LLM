@@ -69,7 +69,7 @@ async def upload_user_files(
     course_map = {c["id"]: c["code"] for c in courses}
 
     # TODO: Extend to more than pdfs
-    allowed_types = ['".pdf "', '".docx "', '".pptx "', '".md "']
+    allowed_types = ['".pdf"', '".docx"', '".pptx"', '".md"']
 
     # =======================
     # =======================

@@ -16,9 +16,12 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo install canvas-downloader
 
 # # ── Imagen final ──────────────────────────────────────────────
-FROM python:3.11-slim
+#FROM python:3.11-slim
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
 RUN apt-get update && apt-get install -y \
+python3.11 \
+python3-pip \
 curl \
 libgl1 \
 libglib2.0-0 \

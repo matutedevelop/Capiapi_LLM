@@ -29,7 +29,7 @@ qdrant_client==1.17.1
 # No additional Python packages required - Debezium runs as a Docker container
 
 # ETL / Sync
-pandas==3.0.2
+pandas==2.3.3
 unidecode==1.4.0
 
 # Google gemini
@@ -40,4 +40,4 @@ sentence-transformers==5.1.0
 ollama==0.6.1
 
 # Docling
-docling==2.92.0
+#docling==2.92.0

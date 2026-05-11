@@ -173,6 +173,7 @@ class CanvasClient:
                 result = self._binary_caller(flags=flags)
             except ProblematicCourseException:
                 problematic_course_codes.append(course_code)
+                continue
 
             # parse the result
 

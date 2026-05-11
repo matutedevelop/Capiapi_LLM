@@ -2,12 +2,14 @@ from ETL.EXTRACT.canvas_downloader import CanvasClient
 from ETL.LOAD.qdrant_loader import on_new_document
 from ETL.LOAD.sync import sync_user
 from ETL.TRANSFORM.pdf_to_md import process_pdf_blobs_parallel
+from ETL.LOAD.upload import upload_user_files
 from azure.storage.blob import BlobServiceClient
 import os
 import dotenv
 import asyncio
 import time
 from neon_auth.client import NeonClient
+import argparse
 
 
 def user_pipeline(user_id: int):
@@ -18,6 +20,7 @@ def user_pipeline(user_id: int):
 
     print("initializing state of user_pipeline", flush=True)
     print(f"USER_ID {user_id}", flush=True)
+    total_start = time.perf_counter()
 
     # ==State
     dotenv.load_dotenv()
@@ -28,6 +31,7 @@ def user_pipeline(user_id: int):
     if not user_data_response:
         print("Couldnt get user data to start the user_pipeline", flush=True)
         return
+    print(f"{user_data_response=}", flush=True)
     user_canvas_api = user_data_response[0]["canvas_api_token"]
     user_canvas_url = "https://canvas.iteso.mx"  # TODO: make this general
 
@@ -41,7 +45,7 @@ def user_pipeline(user_id: int):
     # ====Hicimos lo mejor que pudimos profe
 
     print("BEG SYNC USER TO NEON", flush=True)
-    start = time.perf_counter
+    start = time.perf_counter()
     try:
         sync_user(user_id=user_id, nc=nc, cc=cc)
 
@@ -62,8 +66,9 @@ def user_pipeline(user_id: int):
     container_client = ac.get_container_client(os.getenv("AZURE_CONTAINER_RAW"))
 
     print("===========")
-    print("BEGINING OF RAW DATALAKE")
+    print("BEGINING OF RAW DATALAKE", flush=True)
     print("===========")
+    start = time.perf_counter()
     try:
         asyncio.run(
             upload_user_files(user_id=user_id, nc=nc, ac=ac, canvas_api=user_canvas_api)
@@ -72,15 +77,18 @@ def user_pipeline(user_id: int):
         print("The pipeline ended while runing upload_file", flush=True)
         raise e
 
+    end = time.perf_counter()
+
     print("===========")
     print("END OF  RAW DATALAKE")
+    print(f"RAW DATALAKE TOOK {end - start}s")
     print("===========")
 
     print("===========")
     print("BEGINING OF Docling")
     print("===========")
+    start = time.perf_counter()
     try:
-        pass
         # TODO do this parallel
         blob_names = [
             blob.name
@@ -94,15 +102,18 @@ def user_pipeline(user_id: int):
         print("The pipeline ended while running docling pipeline", flush=True)
         raise e
 
+    end = time.perf_counter()
     print("===========")
     print("END OF  Docling")
+    print(f"Docling TOOK {end - start}s")
     print("===========")
 
     print("===========")
     print("BEGINING OF QDRANT")
     print("===========")
+    start = time.perf_counter()
     try:
-        allowed_types = ['".pdf "', '".docx "', '".pptx "', '".md "']
+        allowed_types = ['".pdf"', '".docx"', '".pptx"', '".md"']
         for course in courses:
             course_code = course["code"]
             course_id = course["id"]
@@ -114,16 +125,28 @@ def user_pipeline(user_id: int):
                 },
             )
 
-            for doc in documents:
-                print(f"{doc['filename']=}")
+            n_documents = len(documents)
+
+            for i, doc in enumerate(documents):
+                print(f"course:{doc['course_id']}, filename:{doc['filename']}")
+                print(f"[QDRANT] ==== processing {i + 1}/{n_documents} ====")
+                print("=====")
                 on_new_document(course_code=course_code, filename=doc["filename"])
     except Exception as e:
         print("The pipeline ended while running qdrant pipeline", flush=True)
         raise e
 
+    end = time.perf_counter()
     print("===========")
     print("BEGINING OF QDRANT")
+    print(f"QDRANT TOOK {end - start}s")
     print("===========")
-
+    total_end = time.perf_counter()
     print("<><><><><><><><><><><><><><")
     print(f"END OF MAIN PIPELINE OF USER {user_id}")
+    print(f"=====  TOOK {total_end - total_start // 60}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("user-id")
