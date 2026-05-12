@@ -28,7 +28,7 @@ class NeonClient:
             headers=self._get_headers(extra_headers),
             **kwargs
         )
-        if r.status_code == 401:
+        if r.status_code in (401,400):
             print("Token expired, re-authenticating...")
             self._authenticate()
             r = httpx.request(
@@ -63,6 +63,8 @@ class NeonClient:
     def update(self, table: str, params: dict, data: dict):
         r = self._request("PATCH", table, params=params, json=data)
         print(f"UPDATE {table} - status: {r.status_code}")
+        if r.status_code == 204 or not r.content:
+            return None
         return r.json()
 
     def delete(self, table: str, params: dict):

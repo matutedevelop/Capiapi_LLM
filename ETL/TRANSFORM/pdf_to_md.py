@@ -1,13 +1,13 @@
 from azure.storage.blob import BlobServiceClient
-from docling.document_converter import DocumentConverter
-#from docling.datamodel.base_models import InputFormat
-#from docling.datamodel.format_options import PdfFormatOptions
-# from docling.datamodel.pipeline_options import (
-#     PdfPipelineOptions,
-#     AcceleratorOptions,
-#     AcceleratorDevice,
-#     RapidOcrOptions,
-# )
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+    AcceleratorOptions,
+    AcceleratorDevice,
+)
+
+
 from ETL.LOAD.upload import upload_file
 import tempfile
 import dotenv
@@ -67,10 +67,10 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
         # )
         #
         # format_options = {
-        #     InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
-        # # }
-        # # 1. Configurar el Pipeline de PDF optimizado para la RTX 5080
-        # pdf_pipeline_options = PdfPipelineOptions()
+        # InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+        # }
+        # 1. Configurar el Pipeline de PDF optimizado para la RTX 5080
+        #pdf_pipeline_options = PdfPipelineOptions()
         #
         # # [REQUERIMIENTO GPU] Forzar a la GPU (CUDA) con 4 hilos de CPU para despacho
         # pdf_pipeline_options.accelerator_options = AcceleratorOptions(
@@ -90,9 +90,31 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
         #     pipeline_options=pdf_pipeline_options
         # )
         #
-        #converter = DocumentConverter(format_options=format_options)
-        converter = DocumentConverter()
 
+
+
+        #converter = DocumentConverter()
+
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=4,
+            device=AcceleratorDevice.CUDA
+        )
+
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+
+
+
+
+
+
+
+        # converter = DocumentConverter(format_options=format_options)
 
         result = converter.convert(tmp_path)
         markdown = result.document.export_to_markdown()
