@@ -1,0 +1,43 @@
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.13.0
+bcrypt==5.0.0
+certifi==2026.2.25
+click==8.3.2
+colorama==0.4.6
+fastapi==0.136.0
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.11
+psycopg2-binary==2.9.11
+pydantic==2.13.3
+pydantic_core==2.46.3
+python-dotenv==1.2.2
+starlette==1.0.0
+typing-inspection==0.4.2
+typing_extensions==4.15.0
+uvicorn==0.45.0
+
+# DataLake Azure
+azure-storage-blob==12.28.0
+
+# Qdrant
+qdrant_client==1.17.1
+
+# Debezium / CDC
+# No additional Python packages required - Debezium runs as a Docker container
+
+# ETL / Sync
+pandas==2.3.3
+unidecode==1.4.0
+
+# Google gemini
+google-genai==1.73.1
+sentence-transformers==5.1.0
+
+# Ollama
+ollama==0.6.1
+
+# Docling
+#docling==2.92.0

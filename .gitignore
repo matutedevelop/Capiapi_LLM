@@ -1,0 +1,24 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debezium configuration
+debezium/conf/application.properties
+debezium/data/
+
+# canvas-downloader tokens
+ETL/EXTRACT/extract-tools/canvas-downloader.toml
