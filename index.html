@@ -511,9 +511,9 @@ footer{
 <!-- Hero -->
 <section class="hero">
   <div class="hero-left">
-    <div class="hero-eyebrow">ITESO · Data Engineering · 2025</div>
+    <div class="hero-eyebrow">ITESO · Data Engineering · 2026</div>
     <h1>El Canvas<br>que <em>te</em><br>responde.</h1>
-    <p class="hero-desc">CapiAPI conecta los materiales de tus cursos de Canvas con un pipeline RAG. Pregunta, y el sistema busca en tus PDFs, presentaciones y apuntes para responderte con contexto real.</p>
+    <p class="hero-desc">CapiAPI conecta los materiales de tus cursos de Canvas con un modelo de lenguaje de ultima generacion. Pregunta, y capiapi busca en tus PDFs, presentaciones y apuntes para responderte con informacion fidedigna y confiable. Dile adios a los modelos alucines.</p>
     <div class="hero-actions">
       <a href="https://github.com/matutedevelop/DATA_ENGINEERING_PROJECT" class="btn-solid">Ver repositorio</a>
       <a href="#pipeline" class="btn-ghost">Cómo funciona →</a>
@@ -571,7 +571,7 @@ footer{
       <div class="pipe-num">01 — EXTRACT</div>
       <span class="pipe-icon">📥</span>
       <h3>Canvas Download</h3>
-      <p>CanvasDownloader descarga archivos de todos tus cursos autenticados. SHA-256 evita duplicados entre grupos del mismo código de materia.</p>
+      <p>CanvasDownloader descarga archivos de todos tus cursos autenticados. evitando duplicados entre 2 alumnos del mismo grupo.</p>
       <span class="pipe-tag">canvas-bruto</span>
     </div>
 
@@ -580,7 +580,7 @@ footer{
       <div class="pipe-num">02 — TRANSFORM</div>
       <span class="pipe-icon">📄</span>
       <h3>Parse & Markdown</h3>
-      <p>markitdown convierte PDFs, DOCX y PPTX a Markdown limpio con metadata YAML. El índice en Azure rastrea qué fue procesado.</p>
+      <p>docling convierte PDFs, DOCX y PPTX a Markdown limpio con metadata YAML lista para alimentar al modelo. a traves de neondb evitamos realizar el trabajo 2 veces al guardar cuales archivos ya han sido procesados.</p>
       <span class="pipe-tag">canvas-procesado</span>
     </div>
 
@@ -589,7 +589,7 @@ footer{
       <div class="pipe-num">03 — LOAD</div>
       <span class="pipe-icon">🔷</span>
       <h3>Vector Ingestion</h3>
-      <p>Chunks de 600 chars con 100 de overlap. Cada código de materia tiene su propia colección en Qdrant. Embeddings de 768 dims.</p>
+      <p> Gemma3 se encarga de ingestar tu bibliografia y convertir cada parrafo en Embeddings de 768 dims. para que el modelo encuentre la informacion requerida</p>
       <span class="pipe-tag">text-embedding-004</span>
     </div>
 
@@ -598,7 +598,7 @@ footer{
       <div class="pipe-num">04 — QUERY</div>
       <span class="pipe-icon">🤖</span>
       <h3>RAG Query</h3>
-      <p>La pregunta se embebe, recupera top-K chunks de la colección correspondiente y genera respuesta grounded con Gemini Flash.</p>
+      <p>La pregunta se vectoriza, recupera top-5 chunks de la colección correspondiente y genera respuesta fundamentadas con gemma4.</p>
       <span class="pipe-tag">gemini-1.5-flash</span>
     </div>
 
@@ -606,7 +606,7 @@ footer{
       <div class="pipe-num">05 — AUTH</div>
       <span class="pipe-icon">🔐</span>
       <h3>Data API</h3>
-      <p>Neon PostgreSQL guarda usuarios, cursos y sync logs. JWT de corta duración vía Neon Auth. NeonClient re-autentica en 401 automáticamente.</p>
+      <p>Neon PostgreSQL guarda usuarios, cursos y sync logs. JWT de corta duración vía Neon Auth. NeonClient re-autentica en 401 automáticamente para disponibilidad 24/7 de la bibliografia de tus cursos.</p>
       <span class="pipe-tag">Neon · KAN-13</span>
     </div>
   </div>
@@ -624,27 +624,27 @@ footer{
     <div class="stack-cell">
       <div class="stack-cell-label">Vector DB</div>
       <div class="stack-cell-val">Qdrant</div>
-      <div class="stack-cell-sub">Una colección por código de materia</div>
+      <div class="stack-cell-sub">Una colección por cada grupo, evitando materiales solapados de diferentes maestros</div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Embeddings</div>
-      <div class="stack-cell-val">Gemini text-embedding-004</div>
-      <div class="stack-cell-sub">768 dimensiones, retrieval_query</div>
+      <div class="stack-cell-val">hf gemma4 embedings api</div>
+      <div class="stack-cell-sub">768 dimensiones, retrieval_query, open source y local first</div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">LLM</div>
-      <div class="stack-cell-val">Gemini 1.5 Flash</div>
-      <div class="stack-cell-sub">Generación de respuestas grounded</div>
+      <div class="stack-cell-val">gemma4:26b / gemma4 legacy </div>
+      <div class="stack-cell-sub">Generación de respuestas fundamentadas atraves de gemma4 y el daemon de ollama</div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Data Lake</div>
       <div class="stack-cell-val">Azure Blob Storage</div>
-      <div class="stack-cell-sub">canvas-bruto + canvas-procesado</div>
+      <div class="stack-cell-sub">datalake para almacenar la bibliografia pre y post procesado</div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Base de datos</div>
       <div class="stack-cell-val">Neon PostgreSQL 17</div>
-      <div class="stack-cell-sub">Usuarios, cursos, sync logs</div>
+      <div class="stack-cell-sub">Usuarios, cursos, sync logs, documents metadata y relaciones estudiante-curso </div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Auth</div>
@@ -653,13 +653,13 @@ footer{
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Parser</div>
-      <div class="stack-cell-val">markitdown</div>
-      <div class="stack-cell-sub">PDF, DOCX, PPTX → Markdown</div>
+      <div class="stack-cell-val">docling</div>
+      <div class="stack-cell-sub">PDF, DOCX, PPTX → Markdown OCR + Transformers text extraction</div>
     </div>
     <div class="stack-cell">
       <div class="stack-cell-label">Dedup</div>
-      <div class="stack-cell-val">SHA-256 + index.json</div>
-      <div class="stack-cell-sub">Evita reprocesar archivos sin cambios</div>
+      <div class="stack-cell-val">canvas downloader</div>
+      <div class="stack-cell-sub">Open source rust-based api wrapper to scrap and fetch course and documents' critical data</div>
     </div>
   </div>
 </section>
@@ -706,7 +706,7 @@ footer{
 </section>
 
 <footer>
-  <span>CapiAPI · ITESO Data Engineering · 2025</span>
+  <span>CapiAPI · ITESO Data Engineering · 2026</span>
   <span>matutedevelop/DATA_ENGINEERING_PROJECT</span>
 </footer>
 
