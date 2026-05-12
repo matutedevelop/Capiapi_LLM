@@ -1,14 +1,18 @@
 from azure.storage.blob import BlobServiceClient
 from docling.document_converter import DocumentConverter
-from docling.datamodel.pipeline_options import PipelineOptions, AcceleratorOptions
-from docling.datamodel.base_models import AcceleratorDevice
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PipelineOptions,
+    AcceleratorOptions,
+    AcceleratorDevice,
+)
+from docling.document_converter import PdfFormatOption
 from ETL.LOAD.upload import upload_file
 import tempfile
 import dotenv
 import os
 import io
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 
 
 # ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
@@ -57,12 +61,15 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
 
         pipeline_options = PipelineOptions(
             accelerator_options=AcceleratorOptions(
-                num_threads=4,
-                device=AcceleratorDevice.CUDA
+                num_threads=4, device=AcceleratorDevice.CUDA
             )
         )
 
-        converter = DocumentConverter(pipeline_options=pipeline_options)
+        format_options = {
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+        }
+
+        converter = DocumentConverter(format_options=format_options)
         result = converter.convert(tmp_path)
         markdown = result.document.export_to_markdown()
         confidence = get_confidence_score(result)
@@ -126,7 +133,6 @@ def process_pdf_blob(blob_name: str, canvas_token: str) -> bool:
     # 3. upload
     md_filename = filename.rsplit(".", 1)[0] + ".md"
 
-
     upload_file(
         ac=ac,
         container_name=processed_container_name,
@@ -164,13 +170,16 @@ def process_pdf_blobs_parallel(
             try:
                 results[blob_name] = future.result()
             except Exception as e:
-                print(f"[docling] FAILED {blob_name}: {type(e).__name__}: {e}", flush=True)
+                print(
+                    f"[docling] FAILED {blob_name}: {type(e).__name__}: {e}", flush=True
+                )
                 results[blob_name] = False
 
     succeeded = sum(1 for v in results.values() if v)
     failed = len(results) - succeeded
     print(f"[docling] Done: {succeeded} OK, {failed} FAILED")
     return results
+
 
 if __name__ == "__main__":
     pass
