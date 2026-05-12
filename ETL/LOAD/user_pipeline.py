@@ -125,7 +125,7 @@ def user_pipeline(user_id: int):
                     "loaded": "eq.false",
                 },
             )
-            print(":::::::::" + documents,flush=True)
+            print(f"::::::::: {documents}",flush=True)
 
             n_documents = len(documents)
 
