@@ -134,6 +134,7 @@ def on_new_document(course_code: str, filename: str) -> None:
 
     # load to Qdrant
     load_file_to_qdrant(course_code, filename_md, content)
+    return filename
 
 
 if __name__ == "__main__":

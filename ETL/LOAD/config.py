@@ -18,9 +18,9 @@ def get_collection_name(course_code: str) -> str:
 
 def get_embedding(text: str, is_query: bool = False):
     if is_query:
-        vector = model.encode_query(text)
+        vector = model.encode_query(text,batch_size=32,show_progress_bar=True)
 
     else:
-        vector = model.encode_document(text)
+        vector = model.encode_document(text,batch_size=32,show_progress_bar=True)
 
     return vector

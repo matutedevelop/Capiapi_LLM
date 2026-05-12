@@ -1,4 +1,5 @@
-FROM python:3.11-slim AS builder
+#FROM python:3.11-slim AS builder
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04 AS builder
 #
 # # Dependencias del sistema
 RUN apt-get update && apt-get install -y \
@@ -28,6 +29,8 @@ libglib2.0-0 \
 tesseract-ocr \
 poppler-utils \
 && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
 
 WORKDIR /app
 

@@ -122,23 +122,39 @@ def user_pipeline(user_id: int):
                 params={
                     "course_id": f"eq.{course_id}",
                     "file_type": f"in.({','.join(allowed_types)})",
+                    "loaded": "eq.false",
                 },
             )
+            print(f"::::::::: {documents}",flush=True)
 
             n_documents = len(documents)
+
+            loaded_filenames = []
 
             for i, doc in enumerate(documents):
                 print(f"course:{doc['course_id']}, filename:{doc['filename']}")
                 print(f"[QDRANT] ==== processing {i + 1}/{n_documents} ====")
                 print("=====")
-                on_new_document(course_code=course_code, filename=doc["filename"])
+                loaded_filename = on_new_document(
+                    course_code=course_code, filename=doc["filename"]
+                )
+                if loaded_filename is not None:
+                    loaded_filenames.append(loaded_filename)
+
+            if loaded_filenames:
+                nc.update(
+                    table="documents",
+                    params={"filename": f"in.({','.join(loaded_filenames)})"},
+                    data={"loaded": True},
+                )
+
     except Exception as e:
         print("The pipeline ended while running qdrant pipeline", flush=True)
         raise e
 
     end = time.perf_counter()
     print("===========")
-    print("BEGINING OF QDRANT")
+    print("END OF QDRANT")
     print(f"QDRANT TOOK {end - start}s")
     print("===========")
     total_end = time.perf_counter()

@@ -1,14 +1,19 @@
 from azure.storage.blob import BlobServiceClient
-from docling.document_converter import DocumentConverter
-from docling.datamodel.pipeline_options import PipelineOptions, AcceleratorOptions
-from docling.datamodel.base_models import AcceleratorDevice
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+    AcceleratorOptions,
+    AcceleratorDevice,
+)
+
+
 from ETL.LOAD.upload import upload_file
 import tempfile
 import dotenv
 import os
 import io
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 
 
 # ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
@@ -55,14 +60,62 @@ def convert_stream_to_markdown(byte_stream: io.BytesIO, filename: str):
         with open(tmp_path, "wb") as f:
             f.write(byte_stream.read())
 
-        pipeline_options = PipelineOptions(
-            accelerator_options=AcceleratorOptions(
-                num_threads=4,
-                device=AcceleratorDevice.CUDA
-            )
+        # pipeline_options = PipelineOptions(
+        #     accelerator_options=AcceleratorOptions(
+        #         num_threads=4, device=AcceleratorDevice.CUDA
+        #     )
+        # )
+        #
+        # format_options = {
+        # InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options),
+        # }
+        # 1. Configurar el Pipeline de PDF optimizado para la RTX 5080
+        #pdf_pipeline_options = PdfPipelineOptions()
+        #
+        # # [REQUERIMIENTO GPU] Forzar a la GPU (CUDA) con 4 hilos de CPU para despacho
+        # pdf_pipeline_options.accelerator_options = AcceleratorOptions(
+        #     num_threads=4,
+        #     device=AcceleratorDevice.CUDA
+        # )
+        #
+        # # [REQUERIMIENTO GPU] El OCR DEBE usar el backend de torch, si no, correrá en CPU
+        # pdf_pipeline_options.ocr_options = RapidOcrOptions(backend="torch")
+        #
+        # # [REQUERIMIENTO GPU] Subir los batches a 64 para saturar la VRAM de la 5080 y acelerar
+        # pdf_pipeline_options.layout_batch_size = 64
+        # pdf_pipeline_options.ocr_batch_size = 64
+        #
+        # # 2. Asignar las opciones al formato PDF
+        # pdf_format_options = PdfFormatOptions(
+        #     pipeline_options=pdf_pipeline_options
+        # )
+        #
+
+
+
+        #converter = DocumentConverter()
+
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.accelerator_options = AcceleratorOptions(
+            num_threads=4,
+            device=AcceleratorDevice.CUDA
         )
 
-        converter = DocumentConverter(pipeline_options=pipeline_options)
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+
+
+
+
+
+
+
+        # converter = DocumentConverter(format_options=format_options)
+
         result = converter.convert(tmp_path)
         markdown = result.document.export_to_markdown()
         confidence = get_confidence_score(result)
@@ -126,7 +179,6 @@ def process_pdf_blob(blob_name: str, canvas_token: str) -> bool:
     # 3. upload
     md_filename = filename.rsplit(".", 1)[0] + ".md"
 
-
     upload_file(
         ac=ac,
         container_name=processed_container_name,
@@ -164,13 +216,16 @@ def process_pdf_blobs_parallel(
             try:
                 results[blob_name] = future.result()
             except Exception as e:
-                print(f"[docling] FAILED {blob_name}: {type(e).__name__}: {e}", flush=True)
+                print(
+                    f"[docling] FAILED {blob_name}: {type(e).__name__}: {e}", flush=True
+                )
                 results[blob_name] = False
 
     succeeded = sum(1 for v in results.values() if v)
     failed = len(results) - succeeded
     print(f"[docling] Done: {succeeded} OK, {failed} FAILED")
     return results
+
 
 if __name__ == "__main__":
     pass
